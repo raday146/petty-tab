@@ -15,7 +15,7 @@ Prisma stays on 7.10 because npm's `latest` tag points at an 8.0 release candida
 ---
 
 ## M0 · Foundations
-Status: done locally on `feat/m0-foundations`; the CI item waits for the first run on GitHub (no remote yet)
+Status: done (PR #1, `feat/m0-foundations`)
 
 - pnpm monorepo with `apps/web`, `apps/api`, `apps/renderer`, `packages/shared`, `packages/art`,
   `packages/reel`; TypeScript strict everywhere; ESLint and Prettier.
@@ -35,9 +35,9 @@ Done when:
 - [x] `/dev/art` shows all nine portraits and they match `assets/characters/preview.html`
       (`apps/web/e2e/art.spec.ts` "/dev/art draws the nine portraits like preview.html": 8 of 9 pixel-identical,
       the cat's "4/10" sign within 1% for font anti-aliasing; screenshots attached to the Playwright report)
-- [ ] `pnpm lint && pnpm typecheck && pnpm test` pass locally and in CI
-      (local: pass, also from a clean clone with `--frozen-lockfile`; CI: `.github/workflows/ci.yml` written,
-      waiting for a GitHub remote)
+- [x] `pnpm lint && pnpm typecheck && pnpm test` pass locally and in CI
+      (local: pass, also from a clean clone with `--frozen-lockfile`; CI: green on PR #1,
+      https://github.com/raday146/petty-tab/actions/runs/38150717909)
 - [x] The art package's own tests (`node --test`) run as part of `pnpm test` (`packages/art test: ℹ pass 10`)
 - [x] The commands section of `CLAUDE.md` matches the real scripts
 
@@ -45,6 +45,8 @@ Notes from M0:
 - Compose runs `db` only; the api, web and renderer services arrive with M5 and M7.
 - The browser reaches the API on the same origin: Next rewrites `/api/*` to Nest (`API_URL`, default :3001).
 - `--sans` is the font token: art.css reads it for text inside drawings, Tailwind's `font-sans` reuses it.
+- pnpm 12 fails CI installs on unapproved build scripts; approved ones are listed under `allowBuilds` in
+  `pnpm-workspace.yaml` (Prisma only so far).
 - e2e runs Next on port 3100 so it never reuses another local server on :3000.
 
 ## M1 · Design system and static screens
