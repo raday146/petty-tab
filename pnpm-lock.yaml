@@ -223,6 +223,9 @@ importers:
       '@petty-tab/art':
         specifier: workspace:*
         version: link:../../packages/art
+      '@petty-tab/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
       next:
         specifier: 16.4.0
         version: 16.4.0(@playwright/test@1.64.0)(@types/node@24.19.2)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
@@ -253,7 +256,11 @@ importers:
 
   packages/reel: {}
 
-  packages/shared: {}
+  packages/shared:
+    devDependencies:
+      '@petty-tab/art':
+        specifier: workspace:*
+        version: link:../art
 
 packages:
 
