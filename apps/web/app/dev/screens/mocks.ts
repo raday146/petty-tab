@@ -1,8 +1,9 @@
 import type { Species } from '@petty-tab/art';
 import type { Owed } from '@/components/tab/Scoreboard';
 import type { TabCharge } from '@/screens/Tab';
+import type { VerdictData } from '@/screens/Verdict';
 
-export const SCREENS = ['intro', 'invite', 'picker', 'tab', 'plea', 'appeal', 'waiting'] as const;
+export const SCREENS = ['intro', 'invite', 'picker', 'tab', 'plea', 'appeal', 'waiting', 'verdict'] as const;
 export type ScreenName = (typeof SCREENS)[number];
 
 // The prototype's household, so screens line up with reference/screens/.
@@ -43,3 +44,17 @@ export const PLEA_SCORE: typeof SCORE = {
 
 /** Alex appealed the Blanket Burrito; Maya, who filed it, sees the appeal card. */
 export const APPEAL_WEEK: TabCharge[] = WEEK.map((c) => (c.id === 'c4' ? { ...c, status: 'appealed' } : c));
+
+/** Reference 12: Maya won the week. */
+export const VERDICT: Omit<VerdictData, 'winner' | 'loser'> = {
+  tie: false,
+  topCrimes: [
+    { crime: 'burrito', count: 2 },
+    { crime: 'clock', count: 1 },
+    { crime: 'dish', count: 1 },
+  ],
+  sentence: 'coffee7',
+  locked: false,
+  served: false,
+  confirmed: false,
+};
