@@ -123,3 +123,6 @@ export const SENTENCES = {
 
 export type SentenceKey = keyof typeof SENTENCES;
 export const SENTENCE_KEYS = Object.keys(SENTENCES) as SentenceKey[];
+
+/** spec §8. `guilty`, `pending` and `upheld` count toward the score. */
+export type ChargeStatus = 'pending' | 'guilty' | 'appealed' | 'upheld' | 'dropped';
