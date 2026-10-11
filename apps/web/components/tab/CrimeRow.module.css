@@ -1,0 +1,96 @@
+/* design.md §5 Crime row, prototype .it */
+.row {
+  position: relative;
+  display: grid;
+  grid-template-columns: 48px 1fr auto;
+  gap: 14px;
+  align-items: center;
+  padding: 12px 4px;
+}
+.flush {
+  padding-inline: 0;
+}
+.title {
+  min-width: 0;
+  font-weight: 600;
+  font-size: 16.5px;
+  line-height: 1.25;
+}
+.dropped {
+  color: var(--mute);
+}
+.appealedPill {
+  display: inline-flex;
+  align-items: center;
+  height: 30px;
+  padding: 0 12px;
+  border-radius: 999px;
+  box-shadow: inset 0 0 0 1.5px var(--line);
+  color: var(--mute);
+  font-weight: 600;
+  font-size: 13px;
+  line-height: 1;
+  white-space: nowrap;
+}
+.new {
+  animation: filed 0.5s cubic-bezier(0.2, 0.9, 0.3, 1.05);
+}
+@keyframes filed {
+  0% {
+    opacity: 0;
+    transform: translateY(-14px);
+  }
+  100% {
+    opacity: 1;
+  }
+}
+.slam .end {
+  animation: pillwait 1.9s both;
+}
+@keyframes pillwait {
+  0%,
+  80% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+.stamp {
+  position: absolute;
+  right: 2px;
+  top: 50%;
+  margin-top: -15px;
+  animation: slamfade 1.9s cubic-bezier(0.5, 0, 0.9, 0.4) both;
+}
+@keyframes slamfade {
+  0% {
+    transform: rotate(-1deg) scale(2.6);
+    opacity: 0;
+  }
+  10% {
+    transform: rotate(-7deg) scale(0.92);
+    opacity: 1;
+  }
+  14% {
+    transform: rotate(-7deg) scale(1.05);
+  }
+  18%,
+  78% {
+    transform: rotate(-7deg) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: rotate(-7deg) scale(1);
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .new,
+  .slam .end {
+    animation: none;
+  }
+  .stamp {
+    display: none;
+  }
+}
