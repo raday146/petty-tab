@@ -50,7 +50,7 @@ Notes from M0:
 - e2e runs Next on port 3100 so it never reuses another local server on :3000.
 
 ## M1 · Design system and static screens
-Status: done on `feat/m1-design-system`; the differences listed below wait for owner approval
+Status: done (`feat/m1-design-system`); differences approved by the owner on 2026-10-11
 
 - Components from `design.md` §5: Button, Pill, AnimalSticker, NameChip, CrimeRow, PleaCard, Scoreboard
   with Rope, AnimalCard, CrimeTile, Sheet, Toast, Stamp. A React wrapper `<Art>` that calls
@@ -78,7 +78,7 @@ Done when:
       (`a11y.spec.ts` "keyboard › <screen>: every control is reachable with a visible focus ring", and "the log
       sheet opens, traps focus and closes with Escape")
 
-Differences from the references, for approval:
+Differences from the references (approved 2026-10-11):
 1. 01 intro (5% threshold): no name chip and no "Invite your partner" button, per design.md §6.
 2. 02 invite sheet (3.5%): the real `/j/<token>` link, and no name chip behind the scrim. The sheet also gains
    a **Share** button in the link row (only where the phone has a share sheet), which design.md §6 asks for
