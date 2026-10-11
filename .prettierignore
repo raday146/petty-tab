@@ -4,3 +4,4 @@ reference
 docs
 pnpm-lock.yaml
 *.md
+apps/api/src/generated
