@@ -13,6 +13,8 @@
   --butter: #f8e7b5;
   --blush: #f6d5c8;
   --mist: #dfe3ee;
+  /* docs/design.md §3. art.css reads --sans for text inside the drawings. */
+  --sans: var(--font-rubik), 'Heebo', 'Arial Hebrew', system-ui, -apple-system, 'Segoe UI', sans-serif;
 }
 
 @theme inline {
