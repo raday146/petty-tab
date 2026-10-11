@@ -19,7 +19,22 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: ReactNode }): ReactNode {
   return (
     <html lang="en" className={rubik.variable}>
-      <body className="font-sans antialiased">{children}</body>
+      <body className="font-sans">
+        {/* Ink texture for the GUILTY / APPEALED stamps (design.md §5), referenced as url(#grunge). */}
+        <svg width="0" height="0" className="absolute" aria-hidden="true">
+          <filter id="grunge" x="-5%" y="-10%" width="110%" height="120%">
+            <feTurbulence type="fractalNoise" baseFrequency="0.09 0.13" numOctaves={2} seed={5} result="n" />
+            <feColorMatrix
+              in="n"
+              type="matrix"
+              values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -5 4.2"
+              result="h"
+            />
+            <feComposite in="SourceGraphic" in2="h" operator="in" />
+          </filter>
+        </svg>
+        {children}
+      </body>
     </html>
   );
 }
