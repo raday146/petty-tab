@@ -1,0 +1,37 @@
+@import 'tailwindcss';
+
+/* Colour tokens, docs/design.md §2. Components use the Tailwind names, never raw hex. */
+:root {
+  --linen: #f3ead9;
+  --linen-2: #ebe0cc;
+  --paper: #fcf7ec;
+  --ink: #1b2440;
+  --mute: #5d6377;
+  --line: rgba(27, 36, 64, 0.13);
+  --crimson: #c8402a;
+  --mustard: #e9b440;
+  --butter: #f8e7b5;
+  --blush: #f6d5c8;
+  --mist: #dfe3ee;
+}
+
+@theme inline {
+  --color-linen: var(--linen);
+  --color-linen-2: var(--linen-2);
+  --color-paper: var(--paper);
+  --color-ink: var(--ink);
+  --color-mute: var(--mute);
+  --color-line: var(--line);
+  --color-crimson: var(--crimson);
+  --color-mustard: var(--mustard);
+  --color-butter: var(--butter);
+  --color-blush: var(--blush);
+  --color-mist: var(--mist);
+  /* docs/design.md §3 */
+  --font-sans: var(--font-rubik), 'Heebo', 'Arial Hebrew', system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+body {
+  background: var(--linen);
+  color: var(--ink);
+}
