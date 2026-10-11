@@ -1,5 +1,7 @@
 import { useId, type CSSProperties, type ReactNode } from 'react';
 import { createArt, type Art as ArtApi } from '@petty-tab/art';
+import { cx } from '@/lib/cx';
+import s from './Art.module.css';
 
 interface Props {
   /** Builds the markup from this component's own renderer. Never pass user text into it. */
@@ -15,7 +17,7 @@ export function Art({ draw, label, className, style }: Props): ReactNode {
   const svg = draw(createArt({ idPrefix: useId().replace(/[^A-Za-z0-9_-]/g, '') }));
   return (
     <span
-      className={className}
+      className={cx(s.art, className)}
       style={style}
       role={label ? 'img' : undefined}
       aria-label={label}

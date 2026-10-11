@@ -1,0 +1,7 @@
+.art {
+  display: block;
+}
+.art > :global(svg) {
+  width: 100%;
+  height: 100%;
+}

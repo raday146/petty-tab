@@ -1,0 +1,20 @@
+/* design.md §5 Stamp, prototype .stamp */
+.stamp {
+  display: inline-block;
+  font-weight: 700;
+  font-size: 13px;
+  line-height: 1;
+  letter-spacing: 0.14em;
+  padding: 7px 9px 7px 11px;
+  border: 2px solid currentColor;
+  border-radius: 7px;
+  color: var(--crimson);
+  transform: rotate(-7deg);
+  filter: url(#grunge);
+  mix-blend-mode: multiply;
+  white-space: nowrap;
+  text-transform: uppercase;
+}
+.navy {
+  color: var(--ink);
+}

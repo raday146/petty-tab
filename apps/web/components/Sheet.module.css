@@ -1,0 +1,72 @@
+/* design.md §5 Bottom sheet, prototype .sheet. A modal <dialog>: focus trap, Esc and inert page for free. */
+.sheet {
+  position: fixed;
+  inset: auto 0 0;
+  width: 100%;
+  max-width: 480px;
+  max-height: none;
+  margin: 0 auto;
+  padding: 0;
+  border: 0;
+  border-radius: 32px 32px 0 0;
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow: var(--shadow-sheet);
+  transform: translateY(105%);
+  transition:
+    transform 0.38s var(--ease-sheet),
+    overlay 0.38s allow-discrete,
+    display 0.38s allow-discrete;
+}
+.sheet[open] {
+  transform: none;
+}
+@starting-style {
+  .sheet[open] {
+    transform: translateY(105%);
+  }
+}
+.sheet::backdrop {
+  background: transparent;
+  transition:
+    background 0.25s,
+    overlay 0.38s allow-discrete,
+    display 0.38s allow-discrete;
+}
+.sheet[open]::backdrop {
+  background: var(--scrim);
+}
+@starting-style {
+  .sheet[open]::backdrop {
+    background: transparent;
+  }
+}
+.body {
+  padding: 12px 20px 38px;
+}
+.grab {
+  width: 40px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--line);
+  margin: 0 auto 20px;
+}
+.title {
+  font-weight: 800;
+  font-size: 24px;
+  line-height: 1.15;
+  letter-spacing: -0.025em;
+  margin: 0;
+}
+.lead {
+  margin: 8px 0 0;
+  font-size: 15px;
+  line-height: 1.45;
+  color: var(--mute);
+}
+@media (prefers-reduced-motion: reduce) {
+  .sheet,
+  .sheet::backdrop {
+    transition: none;
+  }
+}
