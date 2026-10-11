@@ -140,3 +140,77 @@ test.describe('the tab', () => {
     await test.info().attach('waiting', { body: await page.screenshot(), contentType: 'image/png' });
   });
 });
+
+test.describe('the verdict', () => {
+  test('winner card matches 12', async ({ page }) => {
+    await open(page, 'verdict');
+    await expectMatchesReference(page, '12-verdict-card.png');
+  });
+
+  test('sentence sheet matches 13', async ({ page }) => {
+    await open(page, 'verdict');
+    await page.getByRole('button', { name: 'Change the sentence', exact: true }).click();
+    await expect(page.getByRole('dialog', { name: 'Pick the sentence' })).toBeVisible();
+    await expectMatchesReference(page, '13-sentence-sheet.png');
+  });
+
+  test('Hebrew name matches 16', async ({ page }) => {
+    await open(page, 'verdict?me=מאיה&meSp=rabbit&themSp=sheep');
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('מאיה vs. Alex');
+    // The reference caught confetti mid-fall; reduced motion has none.
+    await expectMatchesReference(page, '16-verdict-hebrew-name.png', { maxRatio: 0.03 });
+  });
+
+  test.describe('with motion', () => {
+    test.use({ reducedMotion: 'no-preference' });
+
+    test('mid-sequence matches 11', async ({ page }) => {
+      await open(page, 'verdict');
+      // 2.3 s in: the stamp has slammed, the heap is down, the crown and sentence are not there yet.
+      await page.evaluate(() => {
+        for (const a of document.getAnimations()) {
+          a.pause();
+          a.currentTime = 2300;
+        }
+      });
+      await expectMatchesReference(page, '11-verdict-mid-sequence.png');
+    });
+  });
+
+  test('picking a sentence changes it and the winner sharing locks it', async ({ page }) => {
+    await open(page, 'verdict');
+    await page.getByRole('button', { name: 'Change the sentence', exact: true }).click();
+    await page.getByRole('button', { name: 'Breakfast in bed' }).click();
+    await expect(page.getByRole('button', { name: /^Breakfast in bed\. Change the sentence/ })).toBeVisible();
+    await page.getByRole('button', { name: 'Share story' }).click();
+    await expect(page.getByRole('button', { name: 'Change the sentence', exact: true })).toHaveCount(0);
+    await expect(page.getByRole('article').getByText('Breakfast in bed', { exact: true })).toBeVisible();
+  });
+
+  test('served and confirmed', async ({ page }) => {
+    await open(page, 'verdict?view=loser');
+    await expect(page.getByRole('button', { name: 'Change the sentence', exact: true })).toHaveCount(0);
+    await page.getByRole('button', { name: 'I served it' }).click();
+    await expect(page.getByRole('button', { name: 'Waiting for Maya' })).toBeDisabled();
+    await test
+      .info()
+      .attach('loser', { body: await page.screenshot({ fullPage: true }), contentType: 'image/png' });
+
+    await open(page, 'verdict?view=served');
+    await page.getByRole('button', { name: "Confirm it's served" }).click();
+    await expect(page.getByText('Served and confirmed.')).toBeVisible();
+  });
+
+  for (const view of ['locked', 'tie']) {
+    test(`${view} variant`, async ({ page }) => {
+      await open(page, `verdict?view=${view}`);
+      await expect(page.getByRole('button', { name: 'Change the sentence', exact: true })).toHaveCount(0);
+      if (view === 'tie') {
+        await expect(page.getByRole('heading', { level: 1 })).toHaveText('Dead even');
+        await expect(page.getByText('No one owes anyone. Suspicious.')).toBeVisible();
+        await expect(page.getByRole('button', { name: 'Share story' })).toHaveCount(0);
+      }
+      await test.info().attach(view, { body: await page.screenshot(), contentType: 'image/png' });
+    });
+  }
+});

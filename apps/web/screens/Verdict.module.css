@@ -1,0 +1,462 @@
+/* design.md §6 The Sunday verdict, prototype #v4. Base styles are the final state; the reveal is below. */
+.screen {
+  background: var(--linen-2);
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+.card {
+  position: relative;
+  margin-top: 54px;
+  width: 100%;
+  aspect-ratio: 390 / 693;
+  overflow: hidden;
+  background: var(--paper);
+  text-align: center;
+}
+.vs {
+  margin: 64px 20px 0;
+  font-weight: 800;
+  font-size: 38px;
+  line-height: 1.05;
+  letter-spacing: -0.035em;
+}
+.vsM {
+  font-size: 30px;
+}
+.vsS {
+  font-size: 24px;
+}
+.members {
+  margin: 6px 20px 0;
+  font-size: 15.5px;
+  color: var(--mute);
+}
+.members bdi {
+  font-weight: 600;
+  color: var(--ink);
+}
+.pic {
+  position: relative;
+  margin-top: 20px;
+  height: 218px;
+  background: var(--butter);
+  overflow: hidden;
+}
+.scene {
+  position: absolute;
+  inset: 0;
+}
+.pic :global(.tkn .o),
+.pic :global(.tkn .t) {
+  stroke-width: 4.6;
+}
+.vstamp {
+  position: absolute;
+  left: calc(50% - 45px);
+  top: 16px;
+  font-weight: 800;
+  font-size: 17px;
+  line-height: 1;
+  letter-spacing: 0.14em;
+  color: var(--crimson);
+  border: 3px solid var(--crimson);
+  border-radius: 9px;
+  padding: 8px 9px 8px 12px;
+  transform: rotate(7deg);
+  filter: url(#grunge);
+  mix-blend-mode: multiply;
+}
+.tiePic {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  height: 100%;
+}
+.tiePic > span {
+  width: 180px;
+  height: 128px;
+}
+.plates {
+  display: grid;
+  grid-template-columns: 216px 165px;
+  column-gap: 9px;
+  justify-content: center;
+  padding-top: 12px;
+}
+.plates b {
+  display: block;
+  max-width: 100%;
+  font-weight: 700;
+  font-size: 16px;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.plates span {
+  display: block;
+  margin-top: 2px;
+  font-size: 12.5px;
+  color: var(--mute);
+}
+.sent {
+  margin: 26px 26px 0;
+}
+.owes {
+  margin: 0;
+  font-size: 15.5px;
+  color: var(--mute);
+}
+.owes bdi {
+  font-weight: 600;
+  color: var(--ink);
+}
+.sentence {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  border: 0;
+  background: none;
+  padding: 0;
+  font-weight: 800;
+  font-size: 29px;
+  line-height: 1.12;
+  letter-spacing: -0.03em;
+  color: var(--ink);
+  text-wrap: balance;
+}
+.tieLine {
+  margin: 26px 26px 0;
+  font-weight: 700;
+  font-size: 22px;
+  line-height: 1.2;
+}
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin: 22px 18px 0;
+}
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 34px;
+  padding: 0 13px 0 7px;
+  border-radius: 999px;
+  background: var(--linen);
+  font-weight: 600;
+  font-size: 13px;
+  line-height: 1;
+  white-space: nowrap;
+}
+.chip > span {
+  width: 24px;
+  height: 24px;
+}
+.chip > span > :global(svg) {
+  filter: none;
+}
+.chip i {
+  font-style: normal;
+  color: var(--mute);
+}
+.foot {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 18px;
+  font-weight: 800;
+  font-size: 15px;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  word-spacing: 0.1em;
+  color: var(--mute);
+}
+.confetti {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.rnd {
+  position: absolute;
+  top: 64px;
+  z-index: 12;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 0;
+  background: var(--linen);
+  display: grid;
+  place-items: center;
+  padding: 0;
+  transition:
+    background 0.12s,
+    transform 0.1s;
+}
+.rnd::before {
+  /* 44px tap target around the 38px circle */
+  content: '';
+  position: absolute;
+  inset: -3px;
+}
+.rnd:active {
+  background: var(--mustard);
+  transform: scale(0.92);
+}
+.rnd svg {
+  width: 18px;
+  height: 18px;
+}
+.back {
+  left: 14px;
+}
+.again {
+  right: 14px;
+}
+.dice {
+  right: 60px;
+}
+.sharebar {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 14px 16px 0;
+}
+.sharebar > button {
+  flex: 1 1 0;
+  width: auto;
+  min-width: 0;
+  height: 52px;
+  gap: 8px;
+  font-size: 15px;
+  white-space: nowrap;
+}
+.sharebar > button:last-child:not(:first-child) {
+  flex: 1.3 1 0;
+}
+.sharebar svg {
+  width: 19px;
+  height: 19px;
+}
+.served {
+  padding: 12px 16px 32px;
+}
+.served > button {
+  height: 52px;
+  font-size: 15px;
+}
+.done {
+  margin: 0;
+  padding: 18px 16px 32px;
+  text-align: center;
+  font-size: 15px;
+  color: var(--mute);
+}
+.sopts {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 20px;
+}
+.sopt {
+  display: grid;
+  grid-template-columns: 40px 1fr;
+  gap: 12px;
+  align-items: center;
+  text-align: start;
+  border: 0;
+  border-radius: 20px;
+  background: var(--linen);
+  padding: 10px 16px;
+  font-weight: 600;
+  font-size: 16px;
+  line-height: 1.25;
+  transition:
+    transform 0.08s,
+    box-shadow 0.12s;
+}
+.sopt:active {
+  transform: scale(0.97);
+}
+.sopt[aria-pressed='true'] {
+  background: var(--butter);
+  box-shadow: inset 0 0 0 2.5px var(--mustard);
+}
+.sopt > span {
+  width: 38px;
+  height: 38px;
+}
+
+/* The reveal (design.md §6), timed from screen open. Reduced motion skips it: the base styles are the end. */
+@media (prefers-reduced-motion: no-preference) {
+  .vs {
+    animation: up 0.45s cubic-bezier(0.2, 0.9, 0.3, 1) 0.2s both;
+  }
+  .pic :global(.lz) {
+    animation: fall 0.5s cubic-bezier(0.3, 0.1, 0.5, 1.25) calc(0.9s + var(--i) * 0.11s) both;
+  }
+  .pic :global(.loser) {
+    animation: squash 0.9s ease-out 0.9s;
+  }
+  .vstamp {
+    animation: vslam 0.34s cubic-bezier(0.5, 0, 0.9, 0.4) 1.9s both;
+  }
+  .pic :global(.crown) {
+    animation: crown 0.6s cubic-bezier(0.3, 0.1, 0.4, 1.5) 2.6s both;
+  }
+  .pic :global(.spk) {
+    animation:
+      appear 0.35s 2.6s both,
+      twinkle 1.6s ease-in-out 2.95s infinite;
+  }
+  .pic :global(.tower) {
+    animation: teeter 2.2s ease-in-out 2.6s infinite;
+  }
+  .pic :global(.ding) {
+    animation: ding 2.6s ease-in-out 2.6s infinite;
+  }
+  .sent {
+    animation: rise 0.45s cubic-bezier(0.2, 1.1, 0.4, 1) 3.2s both;
+  }
+  .chip {
+    animation: up 0.35s cubic-bezier(0.2, 0.9, 0.3, 1) calc(3.7s + var(--i) * 0.1s) both;
+  }
+  .flip {
+    animation: flip 0.35s ease-out;
+  }
+}
+@keyframes up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+}
+@keyframes appear {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes fall {
+  0% {
+    opacity: 1;
+    transform: translateY(-230px) rotate(-20deg);
+  }
+  70% {
+    opacity: 1;
+    transform: translateY(4px) rotate(2deg);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes squash {
+  0%,
+  100% {
+    transform: none;
+  }
+  12%,
+  38%,
+  64%,
+  88% {
+    transform: scale(1.05, 0.9);
+  }
+  25%,
+  50%,
+  76% {
+    transform: scale(0.99, 1.02);
+  }
+}
+@keyframes vslam {
+  0% {
+    transform: rotate(0) scale(2.8);
+    opacity: 0;
+  }
+  55% {
+    transform: rotate(7deg) scale(0.92);
+    opacity: 1;
+  }
+  75% {
+    transform: rotate(7deg) scale(1.05);
+  }
+  100% {
+    transform: rotate(7deg) scale(1);
+    opacity: 1;
+  }
+}
+@keyframes crown {
+  0% {
+    opacity: 0;
+    transform: translateY(-120px) rotate(-18deg);
+  }
+  1% {
+    opacity: 1;
+  }
+  60% {
+    opacity: 1;
+    transform: translateY(3px) rotate(4deg);
+  }
+  80% {
+    transform: translateY(-4px) rotate(-2deg);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes twinkle {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.25;
+  }
+}
+@keyframes teeter {
+  0%,
+  100% {
+    transform: rotate(-2.2deg);
+  }
+  50% {
+    transform: rotate(2.6deg);
+  }
+}
+@keyframes ding {
+  0%,
+  70%,
+  100% {
+    transform: rotate(0);
+  }
+  76% {
+    transform: rotate(-10deg);
+  }
+  84% {
+    transform: rotate(8deg);
+  }
+  92% {
+    transform: rotate(-4deg);
+  }
+}
+@keyframes flip {
+  0% {
+    transform: rotateX(90deg);
+    opacity: 0;
+  }
+  100% {
+    transform: none;
+    opacity: 1;
+  }
+}

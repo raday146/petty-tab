@@ -9,6 +9,7 @@ import { Intro } from '@/screens/Intro';
 import { InviteSheet } from '@/screens/InviteSheet';
 import { Picker } from '@/screens/Picker';
 import { Tab, type TabCharge } from '@/screens/Tab';
+import { Verdict } from '@/screens/Verdict';
 import * as mock from './mocks';
 
 type Query = Record<string, string | undefined>;
@@ -16,7 +17,11 @@ type Query = Record<string, string | undefined>;
 const species = (value: string | undefined, fallback: Species): Species =>
   (ORDER as string[]).includes(value ?? '') ? (value as Species) : fallback;
 
-/** Holds mock state for one screen; M2+ replace this with real data. `?me=&meSp=&themSp=` swap the household. */
+/**
+ * Holds mock state for one screen; M2+ replace this with real data.
+ * `?me=&meSp=&them=&themSp=` swap the household; on `verdict`, `?view=` is winner (default), loser, locked,
+ * served (loser marked it), confirmed or tie.
+ */
 export function DevScreen({ name, query }: { name: mock.ScreenName; query: Query }): ReactNode {
   const router = useRouter();
   const go = (to: string): void => router.push(`/dev/screens/${to}`);
@@ -41,6 +46,8 @@ export function DevScreen({ name, query }: { name: mock.ScreenName; query: Query
       return <TabDemo me={me} them={them} week={mock.APPEAL_WEEK} score={mock.SCORE} />;
     case 'waiting':
       return <TabDemo me={me} them={them} week={[]} score={mock.SCORE} waiting />;
+    case 'verdict':
+      return <VerdictDemo me={me} them={them} view={query.view} />;
   }
 }
 
@@ -133,6 +140,32 @@ function TabDemo(props: {
       onDecide={(id, decision) => status(id, decision === 'uphold' ? 'upheld' : 'dropped')}
       onVerdict={() => router.push('/dev/screens/verdict')}
       onNewLink={() => undefined}
+    />
+  );
+}
+
+function VerdictDemo({ me, them, view = 'winner' }: { me: Member; them: Member; view?: string }): ReactNode {
+  const router = useRouter();
+  const [verdict, setVerdict] = useState({
+    ...mock.VERDICT,
+    winner: me,
+    loser: them,
+    tie: view === 'tie',
+    locked: view === 'locked',
+    served: view === 'served' || view === 'confirmed',
+    confirmed: view === 'confirmed',
+  });
+  const viewer = view === 'loser' ? 'loser' : 'winner';
+  return (
+    <Verdict
+      verdict={verdict}
+      viewer={viewer}
+      onBack={() => router.push('/dev/screens/tab')}
+      onSentence={(sentence) => setVerdict((v) => ({ ...v, sentence }))}
+      // spec §10: the winner's first share locks the sentence; the loser's does not.
+      onShare={() => viewer === 'winner' && setVerdict((v) => ({ ...v, locked: true }))}
+      onServed={() => setVerdict((v) => ({ ...v, served: true }))}
+      onConfirm={() => setVerdict((v) => ({ ...v, confirmed: true }))}
     />
   );
 }
