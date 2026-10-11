@@ -1,0 +1,20 @@
+# M0 runs Postgres only. api, web and renderer services arrive with M5 (renderer) and M7 (deployment).
+services:
+  db:
+    image: postgres:18
+    environment:
+      POSTGRES_USER: petty
+      POSTGRES_PASSWORD: petty
+      POSTGRES_DB: petty_tab
+    ports:
+      - '5432:5432'
+    volumes:
+      - db:/var/lib/postgresql
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U petty -d petty_tab']
+      interval: 2s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  db:
