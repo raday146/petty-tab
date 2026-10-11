@@ -7,13 +7,15 @@ each milestone current.
 **MVP cut line.** M0–M4 plus the card PNG from M5 is enough to put two real couples on it and see whether they
 come back the next week. The reel MP4, push and launch hardening can follow once that answer is yes.
 
-Versions chosen at M0 (fill in): Node … · pnpm … · Next.js … · NestJS … · Prisma … · PostgreSQL … ·
-Tailwind … · Playwright …
+Versions chosen at M0 (2026-10-11): Node 24 LTS · pnpm 12.11.2 · TypeScript 6.0.3 · Next.js 16.4.0 · React 19.3.0 ·
+NestJS 12.1.2 · Prisma 7.10.0 · PostgreSQL 18 · Tailwind 4.3.3 · Playwright 1.64.0 · Vitest 5.0.3 · ESLint 10.12.0 ·
+typescript-eslint 8.71.1 · Prettier 3.9.10. TypeScript stays on 6.0 because typescript-eslint supports `<6.1`;
+Prisma stays on 7.10 because npm's `latest` tag points at an 8.0 release candidate.
 
 ---
 
 ## M0 · Foundations
-Status: not started
+Status: done locally on `feat/m0-foundations`; the CI item waits for the first run on GitHub (no remote yet)
 
 - pnpm monorepo with `apps/web`, `apps/api`, `apps/renderer`, `packages/shared`, `packages/art`,
   `packages/reel`; TypeScript strict everywhere; ESLint and Prettier.
@@ -27,11 +29,23 @@ Status: not started
 - CI (GitHub Actions): install, lint, typecheck, unit tests.
 
 Done when:
-- [ ] `docker compose up -d db && pnpm dev` serves the web app and `/api/health` returns ok
-- [ ] `/dev/art` shows all nine portraits and they match `assets/characters/preview.html`
+- [x] `docker compose up -d db && pnpm dev` serves the web app and `/api/health` returns ok
+      (`/`, `/dev/art` 200; `/api/health` through the Next rewrite → `{"status":"ok","db":"ok"}`, 503 with the
+      db stopped; unit tests `apps/api/src/health.controller.test.ts`)
+- [x] `/dev/art` shows all nine portraits and they match `assets/characters/preview.html`
+      (`apps/web/e2e/art.spec.ts` "/dev/art draws the nine portraits like preview.html": 8 of 9 pixel-identical,
+      the cat's "4/10" sign within 1% for font anti-aliasing; screenshots attached to the Playwright report)
 - [ ] `pnpm lint && pnpm typecheck && pnpm test` pass locally and in CI
-- [ ] The art package's own tests (`node --test`) run as part of `pnpm test`
-- [ ] The commands section of `CLAUDE.md` matches the real scripts
+      (local: pass, also from a clean clone with `--frozen-lockfile`; CI: `.github/workflows/ci.yml` written,
+      waiting for a GitHub remote)
+- [x] The art package's own tests (`node --test`) run as part of `pnpm test` (`packages/art test: ℹ pass 10`)
+- [x] The commands section of `CLAUDE.md` matches the real scripts
+
+Notes from M0:
+- Compose runs `db` only; the api, web and renderer services arrive with M5 and M7.
+- The browser reaches the API on the same origin: Next rewrites `/api/*` to Nest (`API_URL`, default :3001).
+- `--sans` is the font token: art.css reads it for text inside drawings, Tailwind's `font-sans` reuses it.
+- e2e runs Next on port 3100 so it never reuses another local server on :3000.
 
 ## M1 · Design system and static screens
 Status: not started
