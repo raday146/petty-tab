@@ -1,0 +1,25 @@
+{
+  "name": "petty-tab",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@12.11.2",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "dev": "pnpm --parallel --filter @petty-tab/web --filter @petty-tab/api dev",
+    "test": "pnpm -r test",
+    "e2e": "pnpm --filter @petty-tab/web e2e",
+    "lint": "eslint . && prettier --check .",
+    "format": "prettier --write .",
+    "typecheck": "pnpm -r typecheck",
+    "db:migrate": "pnpm --filter @petty-tab/api db:migrate"
+  },
+  "devDependencies": {
+    "@types/node": "^24.19.2",
+    "eslint": "10.12.0",
+    "prettier": "3.9.10",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.71.1"
+  }
+}
