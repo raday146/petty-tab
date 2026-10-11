@@ -1,0 +1,6 @@
+packages/art
+assets
+reference
+docs
+pnpm-lock.yaml
+*.md
