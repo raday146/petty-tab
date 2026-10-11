@@ -1,0 +1,46 @@
+/* One phone screen: full height, max content width 480 (design.md intro), inner areas scroll. */
+.screen {
+  position: relative;
+  height: 100dvh;
+  max-width: 480px;
+  margin: 0 auto;
+  overflow: hidden;
+  overflow: clip;
+  background: var(--linen);
+  color: var(--ink);
+  isolation: isolate;
+  animation: enter 0.32s var(--ease-screen);
+}
+/* design.md §7: 260ms fade + 320ms slide of 22px */
+@keyframes enter {
+  from {
+    opacity: 0;
+    transform: translateX(22px);
+  }
+}
+.nudge {
+  animation: nudge 0.3s ease-out;
+}
+@keyframes nudge {
+  0% {
+    transform: translate(0, 0);
+  }
+  20% {
+    transform: translate(4px, -3px);
+  }
+  45% {
+    transform: translate(-3px, 2px);
+  }
+  70% {
+    transform: translate(2px, -1px);
+  }
+  100% {
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .screen,
+  .nudge {
+    animation: none;
+  }
+}

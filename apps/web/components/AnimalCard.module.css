@@ -1,0 +1,107 @@
+/* design.md §5 Animal card, prototype .an */
+.card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  text-align: start;
+  border: 0;
+  border-radius: 26px;
+  background: var(--paper);
+  padding: 0 0 18px;
+  overflow: hidden;
+  transition:
+    transform 0.14s var(--ease-press),
+    box-shadow 0.12s;
+}
+.card:active:not(:disabled) {
+  transform: scale(0.96);
+}
+.card:disabled {
+  cursor: default;
+}
+.portrait {
+  display: block;
+  position: relative;
+  height: 120px;
+  overflow: hidden;
+}
+.portrait > :global(span) {
+  position: absolute;
+  inset: 0;
+}
+.text {
+  display: block;
+  padding: 13px 15px 0;
+}
+.title {
+  display: block;
+  font-weight: 700;
+  font-size: 15.5px;
+  line-height: 1.2;
+}
+.bio {
+  display: block;
+  margin-top: 5px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--mute);
+}
+/* the last card of an odd count spans both columns, portrait on the left */
+.card:last-child:nth-child(odd) {
+  grid-column: 1 / -1;
+  flex-direction: row;
+  align-items: center;
+  padding: 0;
+}
+.card:last-child:nth-child(odd) .portrait {
+  flex: none;
+  width: 168px;
+}
+.card:last-child:nth-child(odd) .text {
+  padding: 0 18px;
+}
+.selected {
+  box-shadow: 0 0 0 3px var(--mustard);
+}
+.selected .portrait > :global(span) {
+  animation: pick 0.5s cubic-bezier(0.3, 1.7, 0.5, 1);
+}
+.check {
+  position: absolute;
+  right: 10px;
+  top: 10px;
+  width: 26px;
+  height: 26px;
+  padding: 4px;
+  border-radius: 50%;
+  background: var(--mustard);
+  color: var(--ink);
+  animation: pick 0.35s cubic-bezier(0.3, 1.7, 0.5, 1);
+}
+@keyframes pick {
+  0% {
+    transform: scale(0.86) rotate(-4deg);
+  }
+  100% {
+    transform: none;
+  }
+}
+.taken {
+  position: absolute;
+  left: 10px;
+  top: 10px;
+  font-style: normal;
+  font-weight: 600;
+  font-size: 12.5px;
+  line-height: 1;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--paper);
+}
+@media (prefers-reduced-motion: reduce) {
+  .selected .portrait > :global(span),
+  .check {
+    animation: none;
+  }
+}

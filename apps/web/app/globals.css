@@ -45,6 +45,8 @@
 body {
   background: var(--linen);
   color: var(--ink);
+  /* Tailwind's preflight sets 1.5; the approved prototype uses the browser default. */
+  line-height: normal;
 }
 
 button,

@@ -9,6 +9,8 @@ const apiUrl = process.env.API_URL ?? 'http://localhost:3001';
 const config: NextConfig = {
   // Workspace packages ship TypeScript source.
   transpilePackages: ['@petty-tab/shared'],
+  // The floating dev badge would land in screenshot comparisons.
+  devIndicators: false,
   // Same origin for the browser: the session cookie (M2) and SSE (M3) go through /api.
   async rewrites() {
     return [{ source: '/api/:path*', destination: `${apiUrl}/api/:path*` }];
