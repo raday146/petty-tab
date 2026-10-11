@@ -10,6 +10,7 @@ export default tseslint.config(
       'assets/',
       'reference/',
       '**/next-env.d.ts',
+      'apps/api/src/generated/',
     ],
   },
   ...tseslint.configs.recommended,
