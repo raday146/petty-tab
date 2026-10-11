@@ -54,3 +54,11 @@ export function WhatsAppIcon(props: IconProps): ReactNode {
     </svg>
   );
 }
+
+export function CheckIcon(props: IconProps): ReactNode {
+  return (
+    <svg viewBox="0 0 18 18" strokeWidth={2.4} {...stroke} {...props}>
+      <path d="M5 9.5l3 3 5.5-6.5" />
+    </svg>
+  );
+}
