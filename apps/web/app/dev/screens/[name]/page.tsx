@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation';
 import { DevScreen } from '../DevScreen';
 import { SCREENS, type ScreenName } from '../mocks';
 
-// Dev-only: every screen of design.md §6 on mock data. ?me=<name> swaps Maya's name (Hebrew name tests).
+// Dev-only: every screen of design.md §6 on mock data (see DevScreen for the query params).
 export default async function Page({
   params,
   searchParams,
@@ -15,5 +15,5 @@ export default async function Page({
   const { name } = await params;
   if (!(SCREENS as readonly string[]).includes(name)) notFound();
   const query = await searchParams;
-  return <DevScreen name={name as ScreenName} me={query.me} />;
+  return <DevScreen name={name as ScreenName} query={query} />;
 }

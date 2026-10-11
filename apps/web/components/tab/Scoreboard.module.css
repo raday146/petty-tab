@@ -17,6 +17,10 @@
   text-align: center;
   min-width: 0;
 }
+.sticker {
+  /* the prototype's `.pl span` rule also lands on the avatar wrapper; the approved layout includes it */
+  margin-top: 3px;
+}
 .name {
   margin-top: 10px;
   max-width: 100%;

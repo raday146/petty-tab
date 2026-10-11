@@ -19,8 +19,8 @@ interface Props {
   lead: number;
   meOwed: Owed;
   themOwed: Owed;
-  /** A unit on my side that just went up, to bump its pill. */
-  bump?: UnitKey;
+  /** A unit on my side that just went up; a new `n` replays the bump. */
+  bump?: { unit: UnitKey; n: number };
 }
 
 export function Scoreboard({ me, them, lead, meOwed, themOwed, bump }: Props): ReactNode {
@@ -64,7 +64,7 @@ function Player({
 }): ReactNode {
   return (
     <div className={s.player}>
-      <AnimalSticker species={member.species} face={face} dir={dir} size={70} />
+      <AnimalSticker species={member.species} face={face} dir={dir} size={70} className={s.sticker} />
       <b className={cx(s.name, member.name.length > 8 && s.long)}>
         <bdi>{member.name}</bdi>
       </b>
@@ -73,7 +73,7 @@ function Player({
   );
 }
 
-function OwedList({ member, owed, bump }: { member: Member; owed: Owed; bump?: UnitKey }): ReactNode {
+function OwedList({ member, owed, bump }: { member: Member; owed: Owed; bump?: Props['bump'] }): ReactNode {
   return (
     <div>
       <p className={s.owedLabel}>
@@ -81,7 +81,12 @@ function OwedList({ member, owed, bump }: { member: Member; owed: Owed; bump?: U
       </p>
       <div className={s.pills}>
         {owed.map(({ unit, count }) => (
-          <Pill key={unit} unit={unit} count={count} bump={unit === bump} />
+          <Pill
+            key={unit === bump?.unit ? `${unit}-${bump.n}` : unit}
+            unit={unit}
+            count={count}
+            bump={unit === bump?.unit}
+          />
         ))}
       </div>
     </div>
