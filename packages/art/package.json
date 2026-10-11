@@ -1,0 +1,19 @@
+{
+  "name": "@petty-tab/art",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Petty Tab character, sticker and scene art as dependency-free SVG string builders.",
+  "type": "module",
+  "main": "./index.js",
+  "types": "./index.d.ts",
+  "exports": {
+    ".": { "types": "./index.d.ts", "default": "./index.js" },
+    "./art.css": "./art.css"
+  },
+  "files": ["index.js", "index.d.ts", "art.css"],
+  "scripts": {
+    "generate": "node scripts/generate.mjs",
+    "test": "node --test test/*.test.mjs"
+  },
+  "sideEffects": ["*.css"]
+}

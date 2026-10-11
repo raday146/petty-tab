@@ -30,7 +30,7 @@ card, name order, the invite flow, swapping animals), the docs win; `design.md` 
 | Push | Web Push with VAPID keys |
 | Renders | `apps/renderer`: headless Chromium (Playwright) + ffmpeg, card PNG and reel MP4 |
 | Tests | Vitest (unit), Playwright (e2e and screenshot comparison) |
-| Local infra | Docker Compose: postgres, api, web, renderer |
+| Local infra | Docker Compose: postgres (api, web, renderer services arrive in M5 and M7) |
 
 Use the current stable major of each tool at setup time and record the versions in `docs/plan.md`.
 
@@ -51,12 +51,16 @@ docs/ reference/  specs and visual targets (read-only for code changes, see belo
 M0 creates these scripts; keep this list accurate whenever scripts change.
 
 ```
+nvm use && corepack enable pnpm   # Node 24 from .nvmrc; pnpm version from packageManager
+cp .env.example .env              # before the first install: prisma generate reads DATABASE_URL
 pnpm install
 docker compose up -d db           # Postgres only
-pnpm dev                          # web + api in watch mode
-pnpm test                         # Vitest across packages
-pnpm e2e                          # Playwright end-to-end and screenshot tests
-pnpm lint && pnpm typecheck
+pnpm dev                          # web (:3000) + api (:3001) in watch mode; /api/* is proxied by web
+pnpm test                         # Vitest across packages, plus the art package's node:test suite
+pnpm --filter @petty-tab/web exec playwright install chromium   # once, before the first e2e run
+pnpm e2e                          # Playwright end-to-end and screenshot tests (starts web on :3100)
+pnpm lint && pnpm typecheck       # ESLint + Prettier check; tsc in every package
+pnpm format                       # Prettier write
 pnpm db:migrate                   # Prisma migrate dev
 pnpm --filter @petty-tab/art generate   # rebuild static SVGs and the art gallery
 pnpm --filter @petty-tab/art test       # art package tests (node:test, no dependencies)
