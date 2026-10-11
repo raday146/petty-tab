@@ -1,0 +1,143 @@
+/* design.md §6 The Tab, prototype #v3 */
+.screen {
+  display: flex;
+  flex-direction: column;
+}
+.head {
+  padding: 70px 20px 0;
+  flex: none;
+  position: relative;
+  z-index: 5;
+}
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.title {
+  font-weight: 800;
+  font-size: 30px;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  margin: 0;
+}
+.chip {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  height: 40px;
+  border: 0;
+  background: var(--paper);
+  color: var(--ink);
+  border-radius: 999px;
+  padding: 0 16px 0 10px;
+  font-weight: 600;
+  font-size: 14px;
+  transition:
+    transform 0.08s,
+    background 0.12s;
+}
+.label {
+  padding: 0 16px;
+}
+button.chip:active {
+  transform: scale(0.95);
+  background: var(--mustard);
+}
+.gavel {
+  width: 22px;
+  height: 22px;
+  animation: knock 2.4s ease-in-out infinite;
+  transform-origin: 70% 80%;
+}
+@keyframes knock {
+  0%,
+  70%,
+  100% {
+    transform: rotate(0);
+  }
+  78% {
+    transform: rotate(-24deg);
+  }
+  84% {
+    transform: rotate(6deg);
+  }
+  90% {
+    transform: rotate(-14deg);
+  }
+  96% {
+    transform: rotate(0);
+  }
+}
+.feed {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 18px 20px 130px;
+  scrollbar-width: none;
+}
+.fab {
+  position: absolute;
+  left: 50%;
+  bottom: 30px;
+  z-index: 20;
+  width: 262px;
+  margin-left: -131px;
+}
+.fab > button {
+  box-shadow: var(--shadow-fab);
+}
+.plus {
+  width: 22px;
+  height: 22px;
+}
+.picks {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  max-height: 486px;
+  overflow-y: auto;
+  margin: 20px -4px 0;
+  padding: 0 4px 6px;
+  scrollbar-width: none;
+}
+/* waiting state: the invite card replaces the scoreboard (spec §4.5) */
+.invite {
+  margin-top: 20px;
+  background: var(--paper);
+  border-radius: 30px;
+  padding: 24px 20px 16px;
+  text-align: center;
+}
+.invite > :first-child {
+  margin: 0 auto;
+}
+.inviteTitle {
+  margin: 12px 0 0;
+  font-weight: 800;
+  font-size: 22px;
+  line-height: 1.15;
+  letter-spacing: -0.025em;
+}
+.inviteLead {
+  margin: 6px 0 0;
+  font-size: 15px;
+  line-height: 1.4;
+  color: var(--mute);
+}
+.newLink {
+  min-height: 44px;
+  border: 0;
+  background: none;
+  font-weight: 600;
+  font-size: 14.5px;
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .gavel {
+    animation: none;
+  }
+}
