@@ -152,7 +152,7 @@ spec §14 changes):
    When the visitor's own pair is still waiting there is no partner name, so it reads "You already have a tab."
 
 ## M3 · The tab
-Status: not started
+Status: done (`feat/m3-the-tab`), awaiting review
 
 - Crime catalog in `packages/shared`; filing, undo within 10s, 24-hour filing limit; pleas and appeal
   resolution with the state machine of spec §8; auto-guilty after 24 hours (job).
@@ -161,12 +161,41 @@ Status: not started
   animation on pleas.
 
 Done when:
-- [ ] Unit tests cover every transition in the plea state machine and the worked scoring examples in spec §9
-- [ ] Undo is refused after a plea; undone charges do not count toward the limit; the held push is cancelled
-- [ ] B appeals, A sees the appeal card live and upholds; the row shows GUILTY and the pill counts again
-- [ ] E2E: A files "Trash Jenga", B sees a plea card live, pleads guilty, A sees the stamp and the pill bump
-- [ ] The 11th charge in 24 hours is refused with the friendly message
-- [ ] Undo inside 10 seconds removes the charge for both members
+- [x] Unit tests cover every transition in the plea state machine and the worked scoring examples in spec §9
+      (`packages/shared/src/charges.test.ts` "transition: the plea state machine" — all four transitions, wrong
+      actor, second plea, decision on a non-appeal, 24 h silence, no time limit on appeals; `score.test.ts`
+      "tally (spec §9 worked examples)" — the four table rows verbatim, with their rope positions)
+- [x] Undo is refused after a plea; undone charges do not count toward the limit; the held push is cancelled
+      (`apps/api/src/charges.service.test.ts` "undo › is refused after a plea", "filing › does not count undone
+      charges toward the limit", "undo › cancels the held push": the pg-boss job goes `created` → `cancelled`)
+- [x] B appeals, A sees the appeal card live and upholds; the row shows GUILTY and the pill counts again
+      (`apps/web/e2e/tab.spec.ts` "B appeals, A sees the appeal card live and upholds; the charge counts again":
+      2 s timeouts; both sides show the upheld row, the stamp and "1 coffee")
+- [x] E2E: A files "Trash Jenga", B sees a plea card live, pleads guilty, A sees the stamp and the pill bump
+      (`tab.spec.ts` "A files Trash Jenga, B pleads guilty live, A sees the stamp and the pill bump": the pill
+      re-mounts with its bump class, and A's Undo disappears once the plea arrives)
+- [x] The 11th charge in 24 hours is refused with the friendly message
+      (`tab.spec.ts` "the 11th charge in 24 hours is refused with the friendly message"; the rolling window and
+      its reopening a day later in `charges.service.test.ts` "filing › refuses the 11th charge…")
+- [x] Undo inside 10 seconds removes the charge for both members
+      (`tab.spec.ts` "Undo inside 10 seconds removes the charge for both"; refused at 10 s in "undo › is refused
+      at 10 seconds")
+
+Notes from M3:
+- Charges live in `charges` (status is a Postgres enum). `week_start` comes from `currentWeek()` in shared
+  (first week from the partner's join to the first Sunday 20:00 ≥ 48 h later); M4 adds the timezone and DST
+  time-travel suite, `week_closed` and sealing.
+- pg-boss 12.34.0 runs on the same Postgres (`pgboss` schema). `charge-push` holds each charge's push 10 s with
+  the charge id as job id, so undo cancels it; its handler is a no-op until M6. `auto-guilty` runs every
+  minute and resolves silent charges at the 24-hour mark; pleas past 24 h are refused by `transition()`, so
+  the sweep's lag never changes an outcome.
+- `/api/events` is an in-memory per-pair bus (one API process; Postgres LISTEN/NOTIFY if that changes). Every
+  message, and every reconnect, makes the web refetch `/me` and `/tab`; the waiting poll is gone. A named
+  `ping` every 25 s keeps proxies from closing the stream. SSE passes through the Next rewrite without buffering.
+- The tab infers live stamps from status changes: the filer's charge going pending → guilty stamps and bumps
+  the pill, the accused's charge going appealed → upheld stamps. Own pleas and decisions stamp where tapped.
+- Under reduced motion the stamp slam is not drawn (M1 behaviour); `tab.spec.ts` runs with motion on.
+- Dev-screen screenshot ratios are unchanged from M1/M2.
 
 ## M4 · The Sunday verdict
 Status: not started
