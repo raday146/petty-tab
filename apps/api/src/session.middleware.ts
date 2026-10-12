@@ -10,7 +10,7 @@ const DAY = 24 * 60 * 60 * 1000;
 
 export type SessionRequest = IncomingMessage & { userId?: string };
 
-function readCookie(header: string | undefined, name: string): string | undefined {
+export function readCookie(header: string | undefined, name: string): string | undefined {
   const pair = header?.split(';').find((c) => c.trim().startsWith(`${name}=`));
   return pair?.split('=')[1]?.trim();
 }
