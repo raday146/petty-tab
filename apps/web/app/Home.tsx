@@ -256,15 +256,22 @@ function Pair({
   );
 }
 
-/** spec §4.6–4.7: change your name or animal, or leave (the name chip opens this). */
+/** spec §4.6–4.8: change your name or animal, leave, or delete everything (the name chip opens this). */
 function Edit({ me, onDone }: { me: Me; onDone: () => void }): ReactNode {
   const [name, setName] = useState(me.member!.name);
   const [species, setSpecies] = useState(me.member!.species);
-  const [confirm, setConfirm] = useState(false);
+  const [confirm, setConfirm] = useState<'leave' | 'delete'>();
   const partner = me.pair!.partner;
   const save = (): void =>
     void api('/members/me', { method: 'PATCH', body: { name, species } }).then(onDone, onDone);
   const leave = (): void => void api('/pairs/current', { method: 'DELETE' }).then(onDone, onDone);
+  const deleteAll = (): void =>
+    void api('/me', { method: 'DELETE' }).then(() => {
+      try {
+        localStorage.clear();
+      } catch {}
+      onDone();
+    }, onDone);
   return (
     <Picker
       name={name}
@@ -275,18 +282,39 @@ function Edit({ me, onDone }: { me: Me; onDone: () => void }): ReactNode {
       onContinue={save}
     >
       <Settings />
-      {confirm ? (
+      {confirm === 'leave' ? (
         <div className={s.confirm}>
           <p>This ends the tab for both of you.</p>
-          <Button variant="outline" onClick={() => setConfirm(false)}>
+          <Button variant="outline" onClick={() => setConfirm(undefined)}>
             Stay
           </Button>
           <Button onClick={leave}>Leave the tab</Button>
         </div>
+      ) : confirm === 'delete' ? (
+        <div className={s.confirm}>
+          <p>
+            Your tabs, verdicts and this phone&rsquo;s place in Petty Tab are deleted for good.
+            {partner && (
+              <>
+                {' '}
+                <bdi>{partner.name}</bdi>&rsquo;s tab ends too.
+              </>
+            )}
+          </p>
+          <Button variant="outline" onClick={() => setConfirm(undefined)}>
+            Keep it
+          </Button>
+          <Button onClick={deleteAll}>Delete everything</Button>
+        </div>
       ) : (
-        <button type="button" className={s.leave} onClick={() => setConfirm(true)}>
-          Leave the tab
-        </button>
+        <>
+          <button type="button" className={s.leave} onClick={() => setConfirm('leave')}>
+            Leave the tab
+          </button>
+          <button type="button" className={s.leave} onClick={() => setConfirm('delete')}>
+            Delete everything
+          </button>
+        </>
       )}
     </Picker>
   );
