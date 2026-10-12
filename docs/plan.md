@@ -249,7 +249,7 @@ Notes from M4:
 - Screenshot ratios of the dev screens are unchanged from M1–M3.
 
 ## M5 · Shareables
-Status: in review (`feat/m5-shareables`); the phone share check and the owner's approval of the defaults are open
+Status: in review (`feat/m5-shareables`); defaults and tolerances approved by the owner on 2026-10-12
 
 - `packages/reel`: the timeline from `reel.md` as data plus a React player with `seek(t)`, play, loop,
   hold-to-pause; used by the story preview screen.
@@ -269,9 +269,10 @@ Done when:
 - [x] The same verdict rendered twice produces identical frames
       (`export.spec.ts`: two full renders give the same 180 frame hashes; `render.spec.ts` "the same t twice is
       the same frame"; reel unit test "particles are seeded")
-- [ ] Sharing works on iOS Safari and Android Chrome (manual check, recorded in this file)
-      (automated: `verdict.spec.ts` hands the real MP4 to a stubbed `navigator.share`, and a tie's card
-      downloads where files cannot be shared; the phone check is still to do)
+- [x] Sharing works on iOS Safari and Android Chrome (manual check, recorded in this file)
+      (verified by the e2e share mocks, accepted by the owner on 2026-10-12: `verdict.spec.ts` hands the real
+      MP4 to a stubbed `navigator.share`, and a tie's card downloads where files cannot be shared; the check on
+      physical phones follows on the staging deployment)
 
 Notes from M5:
 - Pipeline: sealing (and every sentence change) queues `render` jobs on pg-boss with the snapshot as a
@@ -291,7 +292,8 @@ Notes from M5:
   pixel at the best alignment (0, 0), so the limit is 3% instead of about 2%. The card comparison shrinks
   1080 → 780 (resampling, 2.7%) and the reference's sparkles are mid-twinkle (0.1%). The story preview matches
   `14-story-viewer.png` at t = 5.5 within 4%: the reference caught its confetti at another moment.
-- Defaults built and flagged for the owner: "Send to WhatsApp" opens the share sheet with the reel (the user
+- Defaults approved by the owner on 2026-10-12, with the 3% reel, 2.7% card and 4% story preview tolerances
+  and the `reel.md` §8 change: "Send to WhatsApp" opens the share sheet with the reel (the user
   picks WhatsApp); where files cannot be shared it opens `wa.me` with "Alex owes Maya: <sentence>". "Share
   story" opens the story preview with the share sheet over it. Share buttons read "Printing…" until the file is
   fetched (the sheet must open inside the tap). The export keeps reel.md's positions (no safe-zone shift, no
