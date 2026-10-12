@@ -64,6 +64,11 @@ function setCookie(res: ServerResponse, token: string, expires: Date): void {
   );
 }
 
+/** Ends the session in the browser (after "delete everything"). */
+export function clearCookie(res: ServerResponse): void {
+  setCookie(res, '', new Date(0));
+}
+
 /** The session's user id, set by SessionMiddleware. */
 export const UserId = createParamDecorator(
   (_: unknown, ctx: ExecutionContext): string => ctx.switchToHttp().getRequest<SessionRequest>().userId!,
