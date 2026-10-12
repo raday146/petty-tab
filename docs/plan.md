@@ -107,7 +107,7 @@ Notes from M1:
 - `DIFF_DIR=<dir> pnpm e2e` writes each screen's screenshot and diff image there and prints the ratios.
 
 ## M2 · Identity and pairing
-Status: done (`feat/m2-identity-pairing`)
+Status: done (`feat/m2-identity-pairing`); differences approved by the owner on 2026-10-12
 
 - Anonymous session cookie (spec §3); Prisma models `users`, `sessions`, `pairs`, `members`, `invites`.
 - Start a tab, invite link, join page, taken animal rule, waiting state, rename and change animal, leave pair
@@ -141,7 +141,8 @@ Notes from M2:
 - The waiting tab polls `/api/me` every second; SSE `member.joined` replaces it in M3.
 - The complete tab has no FAB until filing lands in M3. An empty owed list reads "nothing" (spec §9).
 
-Differences from the design (no design.md screen for these yet; awaiting approval):
+Differences from the design (no design.md screen for these yet; approved by the owner on 2026-10-12, with the
+spec §14 changes):
 1. The name chip sits at the top end of the tab and opens the picker to rename or change animal. "Leave the
    tab" is a text button under Continue on that picker, with an in-place "This ends the tab for both of you."
    confirm (Stay / Leave the tab).
