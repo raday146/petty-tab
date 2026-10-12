@@ -280,14 +280,15 @@ push_subs       id, user_id, endpoint, keys jsonb, created_at
 All endpoints are under `/api`, use the session cookie, and return JSON. Errors use
 `{ error: { code, message } }` with stable codes (at least `not_in_pair`, `pair_incomplete`, `already_in_pair`,
 `invite_invalid`, `species_taken`, `rate_limited`, `undo_expired`, `already_pleaded`, `week_closed`,
-`not_allowed`, `sentence_locked`).
+`not_allowed`, `sentence_locked`, `invalid_request` for a body that fails its schema).
 
 ```
 GET    /me                               session, membership, pair summary
-POST   /pairs                            { name, species }            → pair + invite link
+POST   /pairs                            { name, species, timezone }  → { link: "/j/<token>" }
 GET    /pairs/invite                     current invite link while waiting (re-issued if expired)
 POST   /pairs/invite                     new invite link (revokes old)
-GET    /invites/:token                   inviter name and species, taken species
+GET    /invites/:token                   inviter name and species (= the taken species), and `own`
+                                         (the viewer created it); never consumes the link
 POST   /invites/:token/accept            { name, species }
 PATCH  /members/me                       { name?, species? }
 DELETE /pairs/current                    leave the pair
