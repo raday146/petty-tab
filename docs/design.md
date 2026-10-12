@@ -162,7 +162,7 @@ The card is the shareable 9:16 image; the app chrome sits over it and is never p
   WhatsApp** (outline).
 - Reveal sequence when the screen opens (timings from screen open): names rise at 0.2s, the heap falls at 0.9s
   (four thuds), GUILTY slams at 1.9s, crown drops with confetti at 2.6s, sentence rises at 3.2s, chips at 3.7s.
-- Tie variant. Default layout, build this unless the owner approves another: the same card; headline
+- Tie variant (approved by the owner on 2026-10-12): the same card; headline
   "Dead even" (members in join order underneath, 15.5 mute: "<bdi>Maya</bdi> and <bdi>Alex</bdi>"); the
   picture band shows both animals' `art.portrait(species)` side by side with `plain`-style portraits, no
   stamp, no crown, no heap; the sentence area reads "No one owes anyone. Suspicious." (22/700); no top-crime
