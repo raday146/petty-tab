@@ -11,6 +11,7 @@
     "e2e": "playwright test"
   },
   "devDependencies": {
+    "@petty-tab/renderer": "workspace:*",
     "@playwright/test": "1.64.0",
     "@tailwindcss/postcss": "4.3.3",
     "@types/react": "^19.3.0",
@@ -19,6 +20,7 @@
   },
   "dependencies": {
     "@petty-tab/art": "workspace:*",
+    "@petty-tab/reel": "workspace:*",
     "@petty-tab/shared": "workspace:*",
     "next": "16.4.0",
     "react": "19.3.0",

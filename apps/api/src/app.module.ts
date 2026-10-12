@@ -3,6 +3,7 @@ import { ChargesController } from './charges.controller.js';
 import { ChargesService } from './charges.service.js';
 import { Clock } from './clock.js';
 import { EventsController } from './events.controller.js';
+import { FilesController } from './files.controller.js';
 import { Events } from './events.js';
 import { HealthController } from './health.controller.js';
 import { Jobs } from './jobs.js';
@@ -24,6 +25,7 @@ const dev = process.env.E2E_HOOKS === '1' ? [DevController] : [];
     ChargesController,
     VerdictsController,
     EventsController,
+    FilesController,
     ...dev,
   ],
   providers: [PrismaService, Clock, Jobs, Events, PairingService, ChargesService, VerdictsService],

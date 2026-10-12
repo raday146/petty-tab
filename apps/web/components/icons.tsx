@@ -62,3 +62,44 @@ export function CheckIcon(props: IconProps): ReactNode {
     </svg>
   );
 }
+
+export function SoundIcon({ on, ...props }: IconProps & { on: boolean }): ReactNode {
+  return (
+    <svg viewBox="0 0 24 24" strokeWidth={2.2} {...stroke} {...props}>
+      <path d="M4 9.5v5h3.5l5 4v-13l-5 4Z" fill="currentColor" />
+      <path d={on ? 'M16 9a4.2 4.2 0 0 1 0 6M18.8 6.5a8 8 0 0 1 0 11' : 'M16.5 9.5l5 5M21.5 9.5l-5 5'} />
+    </svg>
+  );
+}
+
+export function CloseIcon(props: IconProps): ReactNode {
+  return (
+    <svg viewBox="0 0 24 24" strokeWidth={2.4} {...stroke} {...props}>
+      <path d="M6 6l12 12M18 6L6 18" />
+    </svg>
+  );
+}
+
+export function HeartIcon(props: IconProps): ReactNode {
+  return (
+    <svg viewBox="0 0 24 24" strokeWidth={2} {...stroke} {...props}>
+      <path d="M12 20.5s-8-4.8-8-10.5a4.6 4.6 0 0 1 8-3 4.6 4.6 0 0 1 8 3c0 5.7-8 10.5-8 10.5Z" />
+    </svg>
+  );
+}
+
+export function SendIcon(props: IconProps): ReactNode {
+  return (
+    <svg viewBox="0 0 24 24" strokeWidth={2} {...stroke} {...props}>
+      <path d="M21 3L10 14M21 3l-7 18-4-7-7-4Z" />
+    </svg>
+  );
+}
+
+export function PlayIcon(props: IconProps): ReactNode {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden {...props}>
+      <path d="M7 4.5v15l12.5-7.5Z" />
+    </svg>
+  );
+}

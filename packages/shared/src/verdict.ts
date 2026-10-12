@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import type { Species } from '@petty-tab/art';
-import { SENTENCE_KEYS, type ChargeStatus, type CrimeKey, type SentenceKey } from './catalog.ts';
+import { CRIME_KEYS, SENTENCE_KEYS, type ChargeStatus, type CrimeKey, type SentenceKey } from './catalog.ts';
+import { nameSchema, speciesSchema } from './identity.ts';
 import { rng } from './rng.ts';
 import { counts, tally } from './score.ts';
 
@@ -48,6 +49,53 @@ export const sentenceBody = z.object({
   sentenceKey: z.enum(SENTENCE_KEYS as [SentenceKey, ...SentenceKey[]]),
 });
 
+const renderMember = z.object({ name: nameSchema, species: speciesSchema });
+
+/** What a card or reel render is drawn from: the render job's payload and the render routes' input (spec §11). */
+export const renderInput = z.object({
+  winner: renderMember,
+  loser: renderMember,
+  tie: z.boolean(),
+  topCrimes: z
+    .array(
+      z.object({
+        crime: z.enum(CRIME_KEYS as [CrimeKey, ...CrimeKey[]]),
+        count: z.number().int().positive(),
+      }),
+    )
+    .max(3),
+  sentence: z.enum(SENTENCE_KEYS as [SentenceKey, ...SentenceKey[]]).nullable(),
+});
+export type RenderInput = z.output<typeof renderInput>;
+
+export type RenderKind = 'card' | 'reel';
+
+/** What the render routes of apps/web expose to apps/renderer. */
+declare global {
+  interface Window {
+    /** Validates the input (renderInput) and resolves once it is drawn with its fonts loaded. */
+    __render?: (input: unknown) => Promise<void>;
+    /** Reel only: one frame at t (resolves after it is painted), and the soundtrack as base64 WAV. */
+    __reel?: { seek: (t: number) => Promise<void>; wav: () => Promise<string> };
+  }
+}
+
+/** Where a render lands in storage. The sentence is in the key, so a new sentence never serves a stale file. */
+export const renderKey = (verdictId: string, kind: RenderKind, sentence: SentenceKey | null): string =>
+  `verdicts/${verdictId}/${kind}-${sentence ?? 'tie'}.${kind === 'card' ? 'png' : 'mp4'}`;
+
+/** pg-boss queue names shared by apps/api and apps/renderer. */
+export const RENDER_QUEUES = { render: 'render', rendered: 'rendered' } as const;
+
+/** The `render` job (api → renderer) and the `rendered` job (renderer → api) of spec §11. */
+export interface RenderJob {
+  verdictId: string;
+  kind: RenderKind;
+  key: string;
+  input: RenderInput;
+}
+export type RenderedJob = Omit<RenderJob, 'input'>;
+
 /** `GET /api/verdicts/:id`: names winner first; on a tie, join order (spec §10). */
 export interface VerdictView {
   id: string;
@@ -60,6 +108,9 @@ export interface VerdictView {
   locked: boolean;
   served: boolean;
   confirmed: boolean;
+  /** The card PNG / reel MP4 of the current sentence is ready at `/api/verdicts/:id/card|reel`. */
+  card: boolean;
+  reel: boolean;
 }
 
 /** What the verdict stores so later renames never change it (spec §10 step 6). */

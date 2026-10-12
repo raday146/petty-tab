@@ -26,5 +26,11 @@ export default defineConfig({
       // Mounts POST /api/dev/seal for verdict.spec.ts; never set outside the e2e run.
       env: { E2E_HOOKS: '1' },
     },
+    // Renders the sealed verdicts' cards and reels from this web server, so sharing gets real files.
+    {
+      command: 'pnpm --filter @petty-tab/renderer start',
+      env: { WEB_URL: `http://localhost:${port}` },
+      wait: { stdout: /renderer:/ },
+    },
   ],
 });
