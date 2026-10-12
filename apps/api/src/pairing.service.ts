@@ -171,7 +171,8 @@ export class PairingService {
     ]);
   }
 
-  private async inPair(userId: string) {
+  /** The caller's member row with the pair and both members; `not_in_pair` otherwise. */
+  async inPair(userId: string) {
     const member = await this.activeMember(userId);
     if (!member) throw new ApiError(404, 'not_in_pair', 'You do not have a tab yet.');
     return member;
