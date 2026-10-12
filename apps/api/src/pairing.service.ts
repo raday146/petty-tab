@@ -70,7 +70,9 @@ export class PairingService {
       const pair = await tx.pair.create({
         data: {
           timezone: body.timezone,
-          members: { create: { userId, displayName: body.name, species: body.species } },
+          members: {
+            create: { userId, displayName: body.name, species: body.species, joinedAt: this.clock.now() },
+          },
         },
         include: { members: true },
       });
@@ -135,7 +137,13 @@ export class PairingService {
           : { count: 0 };
         if (!invite || consumed.count !== 1) throw invalid();
         await tx.member.create({
-          data: { pairId: invite.pairId, userId, displayName: body.name, species: body.species },
+          data: {
+            pairId: invite.pairId,
+            userId,
+            displayName: body.name,
+            species: body.species,
+            joinedAt: now,
+          },
         });
         return invite.pairId;
       });
