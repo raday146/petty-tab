@@ -9,6 +9,7 @@ import { api } from '@/lib/api';
 import { registerServiceWorker } from '@/lib/pwa';
 import { fetchRender, shareFile, whatsAppText } from '@/lib/share';
 import { Intro } from '@/screens/Intro';
+import { Notice } from '@/screens/Notice';
 import { InviteSheet } from '@/screens/InviteSheet';
 import { Picker } from '@/screens/Picker';
 import { Story } from '@/screens/Story';
@@ -24,10 +25,42 @@ export function Home(): ReactNode {
   const [me, setMe] = useState<Me>();
   // The invite sheet opens once, right after Start a tab.
   const [started, setStarted] = useState(false);
-  const refresh = useCallback(() => api<Me>('/me').then(setMe, noop), []);
+  // Offline (plan.md M6): a clear message over the cached shell; coming back online refetches everything.
+  const [offline, setOffline] = useState(false);
+  const refresh = useCallback(
+    () =>
+      api<Me>('/me').then(
+        (next) => {
+          setMe(next);
+          setOffline(false);
+        },
+        () => setOffline(!navigator.onLine),
+      ),
+    [],
+  );
   useEffect(() => void refresh(), [refresh]);
   useEffect(registerServiceWorker, []);
+  useEffect(() => {
+    const off = (): void => setOffline(true);
+    const on = (): void => void refresh();
+    addEventListener('offline', off);
+    addEventListener('online', on);
+    return () => {
+      removeEventListener('offline', off);
+      removeEventListener('online', on);
+    };
+  }, [refresh]);
 
+  if (offline) {
+    return (
+      <Notice
+        title="You're offline"
+        lead="The tab catches up as soon as you're back."
+        action="Try again"
+        onAction={() => void refresh()}
+      />
+    );
+  }
   if (!me) return null;
   if (!me.member || !me.pair) {
     return (

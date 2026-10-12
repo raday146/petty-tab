@@ -43,7 +43,7 @@ self.addEventListener('fetch', (event) => {
         return res;
       } catch (e) {
         // Offline: any page opens the shell, which shows the offline message.
-        const hit = await cache.match(request, { ignoreSearch: request.mode === 'navigate' });
+        const hit = await cache.match(request, { ignoreSearch: true });
         const shell = request.mode === 'navigate' ? await cache.match('/') : undefined;
         if (hit ?? shell) return hit ?? shell;
         throw e;
