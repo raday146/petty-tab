@@ -47,7 +47,6 @@ export function Verdict({ verdict: v, viewer, ...on }: Props): ReactNode {
   const { toast, show, hide } = useToast();
   const screen = useRef<HTMLElement>(null);
   const canChange = viewer === 'winner' && !v.locked && !v.tie;
-  const nameChars = v.winner.name.length + v.loser.name.length;
 
   // Sounds and confetti follow the CSS reveal; both are skipped under reduced motion.
   useEffect(() => {
@@ -106,112 +105,26 @@ export function Verdict({ verdict: v, viewer, ...on }: Props): ReactNode {
         <ReplayIcon />
       </button>
 
-      <article className={s.card} key={run} aria-label="Verdict card">
-        <h1 className={cx(s.vs, nameChars > 18 ? s.vsS : nameChars > 12 && s.vsM)}>
-          {v.tie ? (
-            'Dead even'
-          ) : (
-            <>
-              <bdi>{v.winner.name}</bdi> vs. <bdi>{v.loser.name}</bdi>
-            </>
-          )}
-        </h1>
-        {v.tie && (
-          <p className={s.members}>
-            <bdi>{v.winner.name}</bdi> and <bdi>{v.loser.name}</bdi>
-          </p>
-        )}
-
-        <div
-          className={s.pic}
-          role="img"
-          aria-label={
-            v.tie
-              ? `${v.winner.name} and ${v.loser.name}, dead even`
-              : `${v.winner.name} the ${SPECIES[v.winner.species].tag.slice(4)} wins; ${v.loser.name} the ${SPECIES[v.loser.species].tag.slice(4)} is buried in laundry`
-          }
-        >
-          {v.tie ? (
-            <div className={s.tiePic}>
-              <Art draw={(art) => art.portrait(v.winner.species)} />
-              <Art draw={(art) => art.portrait(v.loser.species)} />
-            </div>
-          ) : (
-            <>
-              <Art
-                className={s.scene}
-                draw={(art) =>
-                  art.scenes.verdict({
-                    winner: v.winner.species,
-                    loser: v.loser.species,
-                    tokens: v.topCrimes.map((t) => CRIMES[t.crime].sticker),
-                  })
-                }
-              />
-              <div className={s.vstamp} aria-hidden="true">
-                GUILTY
-              </div>
-            </>
-          )}
-        </div>
-
-        {!v.tie && (
-          <div className={s.plates}>
-            <div>
-              <b>
-                <bdi>{v.winner.name}</bdi>
-              </b>
-              <span>{SPECIES[v.winner.species].name}</span>
-            </div>
-            <div>
-              <b>
-                <bdi>{v.loser.name}</bdi>
-              </b>
-              <span>{SPECIES[v.loser.species].name}</span>
-            </div>
-          </div>
-        )}
-
-        {v.tie ? (
-          <p className={s.tieLine}>No one owes anyone. Suspicious.</p>
-        ) : (
-          <div className={s.sent}>
-            <p className={s.owes}>
-              <bdi>{v.loser.name}</bdi> owes <bdi>{v.winner.name}</bdi>
-            </p>
-            {canChange ? (
-              <button
-                type="button"
-                key={flip}
-                className={cx(s.sentence, flip > 0 && s.flip)}
-                aria-label={`${SENTENCES[v.sentence].title}. Change the sentence`}
-                onClick={() => {
-                  sfx.tap();
-                  setSheetOpen(true);
-                }}
-              >
-                {SENTENCES[v.sentence].title}
-              </button>
-            ) : (
-              <p className={s.sentence}>{SENTENCES[v.sentence].title}</p>
-            )}
-          </div>
-        )}
-
-        {!v.tie && (
-          <div className={s.chips}>
-            {v.topCrimes.map((t, i) => (
-              <span key={t.crime} className={s.chip} style={{ '--i': i } as CSSProperties}>
-                <Art draw={(art) => art.sticker(CRIMES[t.crime].sticker)} />
-                {CRIMES[t.crime].title}
-                {t.count > 1 && <i>×{t.count}</i>}
-              </span>
-            ))}
-          </div>
-        )}
-        <div className={s.foot}>petty tab</div>
-        {!v.tie && <Confetti />}
-      </article>
+      <VerdictCard
+        key={run}
+        verdict={v}
+        sentence={
+          canChange && (
+            <button
+              type="button"
+              key={flip}
+              className={cx(s.sentence, flip > 0 && s.flip)}
+              aria-label={`${SENTENCES[v.sentence].title}. Change the sentence`}
+              onClick={() => {
+                sfx.tap();
+                setSheetOpen(true);
+              }}
+            >
+              {SENTENCES[v.sentence].title}
+            </button>
+          )
+        }
+      />
 
       <div className={s.sharebar}>
         {v.tie ? (
@@ -255,6 +168,111 @@ export function Verdict({ verdict: v, viewer, ...on }: Props): ReactNode {
         </Sheet>
       )}
     </Screen>
+  );
+}
+
+/** The shareable card (design.md §6): the verdict screen shows it, and /render/card exports it at 1080×1920. */
+export function VerdictCard({
+  verdict: v,
+  sentence,
+}: {
+  verdict: Pick<VerdictData, 'winner' | 'loser' | 'tie' | 'topCrimes'> & { sentence: SentenceKey | null };
+  /** Replaces the plain sentence (the winner's tappable one). */
+  sentence?: ReactNode;
+}): ReactNode {
+  const nameChars = v.winner.name.length + v.loser.name.length;
+  return (
+    <article className={s.card} aria-label="Verdict card">
+      <h1 className={cx(s.vs, nameChars > 18 ? s.vsS : nameChars > 12 && s.vsM)}>
+        {v.tie ? (
+          'Dead even'
+        ) : (
+          <>
+            <bdi>{v.winner.name}</bdi> vs. <bdi>{v.loser.name}</bdi>
+          </>
+        )}
+      </h1>
+      {v.tie && (
+        <p className={s.members}>
+          <bdi>{v.winner.name}</bdi> and <bdi>{v.loser.name}</bdi>
+        </p>
+      )}
+
+      <div
+        className={s.pic}
+        role="img"
+        aria-label={
+          v.tie
+            ? `${v.winner.name} and ${v.loser.name}, dead even`
+            : `${v.winner.name} the ${SPECIES[v.winner.species].tag.slice(4)} wins; ${v.loser.name} the ${SPECIES[v.loser.species].tag.slice(4)} is buried in laundry`
+        }
+      >
+        {v.tie ? (
+          <div className={s.tiePic}>
+            <Art draw={(art) => art.portrait(v.winner.species)} />
+            <Art draw={(art) => art.portrait(v.loser.species)} />
+          </div>
+        ) : (
+          <>
+            <Art
+              className={s.scene}
+              draw={(art) =>
+                art.scenes.verdict({
+                  winner: v.winner.species,
+                  loser: v.loser.species,
+                  tokens: v.topCrimes.map((t) => CRIMES[t.crime].sticker),
+                })
+              }
+            />
+            <div className={s.vstamp} aria-hidden="true">
+              GUILTY
+            </div>
+          </>
+        )}
+      </div>
+
+      {!v.tie && (
+        <div className={s.plates}>
+          <div>
+            <b>
+              <bdi>{v.winner.name}</bdi>
+            </b>
+            <span>{SPECIES[v.winner.species].name}</span>
+          </div>
+          <div>
+            <b>
+              <bdi>{v.loser.name}</bdi>
+            </b>
+            <span>{SPECIES[v.loser.species].name}</span>
+          </div>
+        </div>
+      )}
+
+      {v.tie ? (
+        <p className={s.tieLine}>No one owes anyone. Suspicious.</p>
+      ) : (
+        <div className={s.sent}>
+          <p className={s.owes}>
+            <bdi>{v.loser.name}</bdi> owes <bdi>{v.winner.name}</bdi>
+          </p>
+          {sentence || <p className={s.sentence}>{v.sentence && SENTENCES[v.sentence].title}</p>}
+        </div>
+      )}
+
+      {!v.tie && (
+        <div className={s.chips}>
+          {v.topCrimes.map((t, i) => (
+            <span key={t.crime} className={s.chip} style={{ '--i': i } as CSSProperties}>
+              <Art draw={(art) => art.sticker(CRIMES[t.crime].sticker)} />
+              {CRIMES[t.crime].title}
+              {t.count > 1 && <i>×{t.count}</i>}
+            </span>
+          ))}
+        </div>
+      )}
+      <div className={s.foot}>petty tab</div>
+      {!v.tie && <Confetti />}
+    </article>
   );
 }
 
