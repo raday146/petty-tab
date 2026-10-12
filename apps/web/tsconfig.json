@@ -7,8 +7,10 @@
     "jsx": "react-jsx",
     "allowJs": false,
     "noEmit": true,
+    "allowImportingTsExtensions": true,
     "declaration": false,
     "incremental": true,
+    "paths": { "@/*": ["./*"] },
     "plugins": [{ "name": "next" }]
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", ".next/dev/types/**/*.ts"],

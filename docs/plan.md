@@ -50,7 +50,7 @@ Notes from M0:
 - e2e runs Next on port 3100 so it never reuses another local server on :3000.
 
 ## M1 · Design system and static screens
-Status: not started
+Status: done (`feat/m1-design-system`); differences approved by the owner on 2026-10-11
 
 - Components from `design.md` §5: Button, Pill, AnimalSticker, NameChip, CrimeRow, PleaCard, Scoreboard
   with Rope, AnimalCard, CrimeTile, Sheet, Toast, Stamp. A React wrapper `<Art>` that calls
@@ -63,11 +63,48 @@ Status: not started
   table, not screens 08–09's perspective.
 
 Done when:
-- [ ] Each screen's screenshot test passes against its reference image, with an agreed tolerance, or each
-      difference is listed and approved
-- [ ] Hebrew name test: the tab and verdict render "מאיה" correctly (compare `15-` and `16-` references)
-- [ ] Reduced motion: the verdict opens at its final state; no idle loops run
-- [ ] Keyboard: every control reachable, focus ring visible
+- [x] Each screen's screenshot test passes against its reference image, with an agreed tolerance, or each
+      difference is listed and approved (`apps/web/e2e/screens.spec.ts`; agreed tolerance 2% of pixels, a pixel
+      differing when a channel is more than 32/255 apart; status bar, home bar and bezel corners masked; per-screen
+      ratios and diff images in the Playwright report. Measured: 01 4.21%, 02 2.72%, 03 1.64%, 04 1.61%,
+      05 1.46%, 06 0.93%, 07 0.75%, 08 1.61%, 09 1.55%, 10 1.37%, 11 0.88%, 12 1.86%, 13 1.25%, 15 1.38%,
+      16 2.90%. 01, 02 and 16 run on their own thresholds, see the differences below)
+- [x] Hebrew name test: the tab and verdict render "מאיה" correctly (compare `15-` and `16-` references)
+      ("the tab › Hebrew name matches 15", "the verdict › Hebrew name matches 16")
+- [x] Reduced motion: the verdict opens at its final state; no idle loops run
+      (`apps/web/e2e/a11y.spec.ts` "reduced motion › <screen>: nothing animates" on every dev screen, and
+      "the verdict opens on its final state")
+- [x] Keyboard: every control reachable, focus ring visible
+      (`a11y.spec.ts` "keyboard › <screen>: every control is reachable with a visible focus ring", and "the log
+      sheet opens, traps focus and closes with Escape")
+
+Differences from the references (approved 2026-10-11):
+1. 01 intro (5% threshold): no name chip and no "Invite your partner" button, per design.md §6.
+2. 02 invite sheet (3.5%): the real `/j/<token>` link, and no name chip behind the scrim. The sheet also gains
+   a **Share** button in the link row (only where the phone has a share sheet), which design.md §6 asks for
+   but the reference does not show.
+3. 16 Hebrew verdict (3%): the reference caught confetti mid-fall; under reduced motion there is none.
+4. 03 picker: the bear's portrait panel is not compared, because the reference caught it mid-snore.
+5. 06–10, 15: the prototype's burrito row is "appealed" but still shows a penalty pill. The mock marks it
+   guilty, because an appealed charge the viewer filed would be an appeal card (spec §8).
+6. 08–09 are drawn from the filer's phone. Here it is Maya's phone, with Alex having filed "Snooze Roulette"
+   against her: "Alex says you did this." The pleading toast reads "You plead guilty / No contest." (or "You
+   appeal / Alex decides."), so the viewer is never named in the third person.
+7. 07 log sheet: ten crime tiles, not nine (spec §6 adds Car DJ Crimes).
+8. Screens without a reference, attached to the report for review: waiting tab (invite card with Share, Copy,
+   New link), appeal card, loser verdict (the served button sits under the share bar, so the screen scrolls),
+   locked verdict, tie verdict (both signature portraits, because `art.portrait` has no face option).
+
+Notes from M1:
+- Components use CSS Modules ported from the prototype, colours only through tokens; shadows and the scrim are
+  built from `--ink` with `color-mix`.
+- `body` line-height is back to `normal`; Tailwind's preflight 1.5 shifted every unset element against the
+  references.
+- The verdict reveal is CSS on delays from screen open. Base styles are the final state, so reduced motion and
+  tests can freeze any moment through `document.getAnimations()`.
+- `@petty-tab/shared` ships TypeScript source with `.ts` import extensions (Turbopack does not map `.js` to
+  `.ts` in workspace packages). The API will need Node 24 type stripping or a build step to use it (M2).
+- `DIFF_DIR=<dir> pnpm e2e` writes each screen's screenshot and diff image there and prints the ratios.
 
 ## M2 · Identity and pairing
 Status: not started

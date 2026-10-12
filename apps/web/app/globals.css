@@ -15,6 +15,15 @@
   --mist: #dfe3ee;
   /* docs/design.md §3. art.css reads --sans for text inside the drawings. */
   --sans: var(--font-rubik), 'Heebo', 'Arial Hebrew', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  /* docs/design.md §4: only floating things get a shadow. */
+  --shadow-fab: 0 14px 30px color-mix(in srgb, var(--ink) 30%, transparent);
+  --shadow-toast: 0 16px 36px color-mix(in srgb, var(--ink) 30%, transparent);
+  --shadow-sheet: 0 -20px 50px color-mix(in srgb, var(--ink) 22%, transparent);
+  --scrim: color-mix(in srgb, var(--ink) 40%, transparent);
+  /* docs/design.md §7 */
+  --ease-press: cubic-bezier(0.3, 1.6, 0.5, 1);
+  --ease-screen: cubic-bezier(0.2, 0.8, 0.3, 1);
+  --ease-sheet: cubic-bezier(0.2, 0.9, 0.3, 1.08);
 }
 
 @theme inline {
@@ -36,4 +45,23 @@
 body {
   background: var(--linen);
   color: var(--ink);
+  /* Tailwind's preflight sets 1.5; the approved prototype uses the browser default. */
+  line-height: normal;
+}
+
+button,
+input {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* docs/design.md §10 */
+:focus-visible {
+  outline: 2.5px solid var(--mustard);
+  outline-offset: 2px;
 }

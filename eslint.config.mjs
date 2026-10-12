@@ -1,3 +1,4 @@
+import reactHooks from 'eslint-plugin-react-hooks';
 import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
@@ -14,4 +15,5 @@ export default tseslint.config(
     ],
   },
   ...tseslint.configs.recommended,
+  { files: ['apps/web/**/*.tsx'], ...reactHooks.configs.flat['recommended-latest'] },
 );

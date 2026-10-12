@@ -1,0 +1,37 @@
+/* design.md §5 Crime tile, prototype .pick */
+.tile {
+  border: 0;
+  border-radius: 24px;
+  background: var(--linen);
+  padding: 16px 14px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: flex-start;
+  text-align: start;
+  transition:
+    transform 0.08s,
+    background 0.12s;
+}
+.tile:active {
+  transform: scale(0.95);
+  background: var(--butter);
+}
+.sticker {
+  width: 54px;
+  height: 54px;
+  transform: rotate(-4deg);
+  transition: transform 0.22s cubic-bezier(0.3, 1.9, 0.5, 1);
+}
+.tile:nth-child(even) .sticker {
+  transform: rotate(5deg);
+}
+.tile:active .sticker {
+  transform: rotate(12deg) scale(1.15);
+}
+.title {
+  font-weight: 600;
+  font-size: 15.5px;
+  line-height: 1.22;
+  min-height: 38px;
+}
