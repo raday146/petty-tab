@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
 
 /** A rectangle in CSS pixels. */
@@ -106,6 +106,7 @@ export async function expectMatchesReference(
   const dir = process.env.DIFF_DIR;
   if (dir) {
     console.log(`${file}: ${(ratio * 100).toFixed(2)}%`);
+    mkdirSync(dir, { recursive: true });
     writeFileSync(`${dir}/${file.replace('.png', '')}-actual.png`, actual);
     writeFileSync(`${dir}/${file.replace('.png', '')}-diff.png`, image);
   }
