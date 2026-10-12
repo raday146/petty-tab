@@ -10,6 +10,8 @@ import { Jobs } from './jobs.js';
 import { PairingController } from './pairing.controller.js';
 import { PairingService } from './pairing.service.js';
 import { PrismaService } from './prisma.service.js';
+import { PushController } from './push.controller.js';
+import { PushService } from './push.service.js';
 import { SessionMiddleware } from './session.middleware.js';
 import { DevController } from './dev.controller.js';
 import { VerdictsController } from './verdicts.controller.js';
@@ -26,15 +28,32 @@ const dev = process.env.E2E_HOOKS === '1' ? [DevController] : [];
     VerdictsController,
     EventsController,
     FilesController,
+    PushController,
     ...dev,
   ],
-  providers: [PrismaService, Clock, Jobs, Events, PairingService, ChargesService, VerdictsService],
+  providers: [
+    PrismaService,
+    Clock,
+    Jobs,
+    Events,
+    PushService,
+    PairingService,
+    ChargesService,
+    VerdictsService,
+  ],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer): void {
     // Every route but /health has a session (spec §3).
     consumer
       .apply(SessionMiddleware)
-      .forRoutes(PairingController, ChargesController, VerdictsController, EventsController, ...dev);
+      .forRoutes(
+        PairingController,
+        ChargesController,
+        VerdictsController,
+        EventsController,
+        PushController,
+        ...dev,
+      );
   }
 }
