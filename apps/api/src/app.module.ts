@@ -10,14 +10,29 @@ import { PairingController } from './pairing.controller.js';
 import { PairingService } from './pairing.service.js';
 import { PrismaService } from './prisma.service.js';
 import { SessionMiddleware } from './session.middleware.js';
+import { DevController } from './dev.controller.js';
+import { VerdictsController } from './verdicts.controller.js';
+import { VerdictsService } from './verdicts.service.js';
+
+// The time-travel hook for end-to-end tests; never mounted unless E2E_HOOKS=1.
+const dev = process.env.E2E_HOOKS === '1' ? [DevController] : [];
 
 @Module({
-  controllers: [HealthController, PairingController, ChargesController, EventsController],
-  providers: [PrismaService, Clock, Jobs, Events, PairingService, ChargesService],
+  controllers: [
+    HealthController,
+    PairingController,
+    ChargesController,
+    VerdictsController,
+    EventsController,
+    ...dev,
+  ],
+  providers: [PrismaService, Clock, Jobs, Events, PairingService, ChargesService, VerdictsService],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer): void {
     // Every route but /health has a session (spec §3).
-    consumer.apply(SessionMiddleware).forRoutes(PairingController, ChargesController, EventsController);
+    consumer
+      .apply(SessionMiddleware)
+      .forRoutes(PairingController, ChargesController, VerdictsController, EventsController, ...dev);
   }
 }

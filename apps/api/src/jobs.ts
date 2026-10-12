@@ -2,7 +2,7 @@ import { Injectable, Logger, type OnModuleDestroy } from '@nestjs/common';
 import { PgBoss } from 'pg-boss';
 
 /** The queues; pg-boss keeps them in its own `pgboss` schema on the same Postgres. */
-export const QUEUES = { chargePush: 'charge-push', autoGuilty: 'auto-guilty' } as const;
+export const QUEUES = { chargePush: 'charge-push', autoGuilty: 'auto-guilty', seal: 'seal' } as const;
 
 /** The one pg-boss instance. Services send jobs through `boss` and register their workers on it. */
 @Injectable()

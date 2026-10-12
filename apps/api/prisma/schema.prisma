@@ -41,6 +41,7 @@ model Pair {
   members   Member[]
   invites   Invite[]
   charges   Charge[]
+  verdicts  Verdict[]
 
   @@map("pairs")
 }
@@ -109,4 +110,29 @@ model Charge {
 
   @@index([pairId, weekStart])
   @@map("charges")
+}
+
+/// spec §10. One per pair and week: the unique key is what makes sealing idempotent.
+model Verdict {
+  id               String    @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  pairId           String    @map("pair_id") @db.Uuid
+  pair             Pair      @relation(fields: [pairId], references: [id], onDelete: Cascade)
+  weekStart        DateTime  @map("week_start") @db.Timestamptz
+  weekEnd          DateTime  @map("week_end") @db.Timestamptz
+  sealedAt         DateTime  @map("sealed_at") @db.Timestamptz
+  /// Null on a tie; the snapshot keeps the members in join order then.
+  winnerId         String?   @map("winner_id") @db.Uuid
+  loserId          String?   @map("loser_id") @db.Uuid
+  isTie            Boolean   @map("is_tie")
+  /// VerdictSnapshot in @petty-tab/shared: names, animals, points and top crimes at sealing.
+  snapshot         Json
+  /// A key of SENTENCES in @petty-tab/shared; null on a tie.
+  sentenceKey      String?   @map("sentence_key")
+  sharedAt         DateTime? @map("shared_at") @db.Timestamptz
+  sentenceLockedAt DateTime? @map("sentence_locked_at") @db.Timestamptz
+  servedAt         DateTime? @map("served_at") @db.Timestamptz
+  confirmedAt      DateTime? @map("confirmed_at") @db.Timestamptz
+
+  @@unique([pairId, weekStart])
+  @@map("verdicts")
 }
