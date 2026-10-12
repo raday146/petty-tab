@@ -8,6 +8,16 @@ on:
 jobs:
   check:
     runs-on: ubuntu-latest
+    # The API tests talk to a real Postgres (same credentials as compose.yaml and .env.example).
+    services:
+      db:
+        image: postgres:18
+        env:
+          POSTGRES_USER: petty
+          POSTGRES_PASSWORD: petty
+          POSTGRES_DB: petty_tab
+        ports: ['5432:5432']
+        options: --health-cmd "pg_isready -U petty -d petty_tab" --health-interval 2s --health-retries 20
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
@@ -15,9 +25,10 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: pnpm
-      # prisma generate (postinstall) reads DATABASE_URL; no database is needed for these checks.
+      # prisma generate (postinstall) reads DATABASE_URL.
       - run: cp .env.example .env
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
       - run: pnpm typecheck
+      - run: pnpm --filter @petty-tab/api exec prisma migrate deploy
       - run: pnpm test

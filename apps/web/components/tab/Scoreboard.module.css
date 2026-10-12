@@ -117,3 +117,9 @@
     transition: none;
   }
 }
+
+/* spec §9: an empty tab reads "nothing". */
+.none {
+  color: var(--mute);
+  font-size: 14px;
+}

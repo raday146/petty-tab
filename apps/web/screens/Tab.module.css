@@ -141,3 +141,10 @@ button.chip:active {
     animation: none;
   }
 }
+
+/* M2: the name chip (design.md §6 intro, "top right") opens the picker to rename, change animal or leave. */
+.me {
+  position: absolute;
+  top: 16px;
+  inset-inline-end: 20px;
+}

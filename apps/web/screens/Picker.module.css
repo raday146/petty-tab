@@ -73,3 +73,13 @@
   padding: 36px 20px 34px;
   background: linear-gradient(to bottom, color-mix(in srgb, var(--linen) 0%, transparent), var(--linen) 36px);
 }
+
+/* M2: the join header (spec §4.3), above the title. */
+.invited {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: -34px 0 8px;
+  font-weight: 600;
+  font-size: 15px;
+}
