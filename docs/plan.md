@@ -362,7 +362,7 @@ Notes from M6:
   branch: 2 and 4 in two runs, different tests each time). Every spec passes when run on its own.
 
 ## M7 · Launch hardening
-Status: in progress (`feat/m7-launch`)
+Status: in review (`feat/m7-launch`); defaults below wait for the owner, deployment waits for a server and domain
 
 - Rate limits on every write endpoint, request size limits, security headers, CSRF protection for cookie auth.
 - Pair deletion after 30 days; a "delete everything" button.
@@ -371,5 +371,67 @@ Status: in progress (`feat/m7-launch`)
 
 Done when:
 - [ ] A restore from last night's backup into a fresh database succeeds
+      (built and checked: `ops/backup.sh` dumps, restores into a scratch database and compares counts; PASS
+      against the dev database, inside the local production stack, and in CI on every push. Ticks once it
+      has run on the server)
 - [ ] The app runs at the production domain over HTTPS with all checks green
-- [ ] A five-minute manual test plan (in this file) passes on two real phones
+      (rehearsed locally with `DOMAIN=localhost`: all services healthy, the headers below served, two people
+      paired with the join arriving live through Caddy and Next. Needs the owner's server and domain)
+- [ ] A five-minute manual test plan (in this file) passes on two real phones (below; also the M5 share and
+      M6 push checks)
+
+Runbook:
+1. A server with Docker (1 vCPU, 2 GB is enough) and a DNS A record for the domain pointing at it; ports 80
+   and 443 open.
+2. `git clone`, then `.env` from `.env.example` with fresh secrets: `DOMAIN`, `POSTGRES_PASSWORD`,
+   `INVITE_KEY` and `FILES_KEY` (`openssl rand -base64 32`), and a new VAPID pair with `VAPID_SUBJECT` set to
+   a real contact.
+3. `docker compose -f compose.prod.yaml up -d --build`. The API applies migrations on start; Caddy gets the
+   certificate on the first request.
+4. Check: `curl https://$DOMAIN/api/health` answers `{"status":"ok","db":"ok"}`; `docker compose -f
+   compose.prod.yaml logs backup` shows a PASS line after the first night. Point an uptime monitor at the
+   health URL.
+5. Restore: `docker compose -f compose.prod.yaml exec backup sh -c 'createdb petty_restored && pg_restore
+   --no-owner -d petty_restored /backups/<file>.dump'`, then point `DATABASE_URL` at it, or drop and
+   recreate `petty_tab` from the dump. Renders: untar `storage-<stamp>.tgz` into the `storage` volume.
+6. Update: `git pull && docker compose -f compose.prod.yaml up -d --build`.
+
+Manual test plan (two phones, one iPhone with iOS 16.4 or later, about five minutes):
+1. Phone A opens the domain, starts a tab, shares the invite to phone B over WhatsApp.
+2. B opens the link, picks a name and animal. A sees B join without reloading, and gets a "joined" push.
+3. Both install the app (iPhone: Share, Add to Home Screen) and turn notifications on from the offer or the
+   edit screen.
+4. A files a charge, undoes it inside 10 seconds: B gets nothing. A files two more: B gets one push within
+   about 10 seconds, then the batch after 2 minutes.
+5. B pleads guilty to one and appeals the other: A gets both pushes and upholds; B gets "upheld".
+6. Airplane mode on one phone, open the app: the offline message shows; back online, it catches up.
+7. After the first Sunday 20:00: both get the verdict push; the winner picks a sentence, shares the card and
+   the reel to WhatsApp and Instagram Stories; the loser marks it served, the winner confirms.
+8. On a throwaway pair, "Delete everything" on one phone: the other phone's tab ends.
+
+Notes from M7:
+- One middleware before the session (`guard.middleware.ts`): writes from another site are refused by
+  `Sec-Fetch-Site` (the cookie is SameSite=Lax as well); 60 writes a minute per session and 30 cookieless
+  requests a minute per client IP, in memory (one API process). Caddy replaces any client-sent
+  X-Forwarded-For, so the IP is real; verified by a 429 from the host while a request from inside Caddy
+  passed. JSON bodies are capped at 8 KB (413).
+- Headers from Next: CSP (same origin only; inline scripts and styles, which Next's hydration needs),
+  nosniff, `Referrer-Policy: same-origin`, a Permissions-Policy, `frame-ancestors 'none'`; HSTS from Caddy.
+- Retention: a daily `purge` job deletes pairs 30 days after they ended, with their renders. "Delete
+  everything" (`DELETE /me`, spec §4.8, new) deletes every pair the user was in, the user, their sessions and
+  push subscriptions, and clears the cookie and the device's local settings.
+- Deployment: one Dockerfile with three targets, `compose.prod.yaml` with Postgres, Caddy and the backup
+  service. Renders stay on a local volume shared by the API and the renderer (no bucket on one server).
+  Errors: Nest already logs unhandled errors with their stack; every service logs to stdout, rotated at
+  5 × 10 MB.
+- The reel determinism test failed under the now faster full e2e run: the screenshot could land before a
+  layer that had just become visible was painted (the plates at 4.10 s). The renderer now waits two
+  animation frames after each `seek(t)`; three full runs passed it.
+- Defaults built and waiting for the owner (no text or numbers in the docs):
+  1. Limits: 60 writes a minute per session, 30 new sessions a minute per IP, 8 KB bodies. The 10 charges a
+     day of spec §7 stay on top.
+  2. "Delete everything" deletes the shared tab at once, so the partner loses its history too (after a leave
+     it is already invisible to them). Copy: "Delete everything" / "Your tabs, verdicts and this phone's
+     place in Petty Tab are deleted for good. Alex's tab ends too." with "Keep it". No reference screen.
+  3. Backups stay on the server for 14 days with no offsite copy; renders on local disk.
+  4. No hosted error tracker; logs only.
