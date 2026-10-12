@@ -427,6 +427,9 @@ Notes from M7:
 - The reel determinism test failed under the now faster full e2e run: the screenshot could land before a
   layer that had just become visible was painted (the plates at 4.10 s). The renderer now waits two
   animation frames after each `seek(t)`; three full runs passed it.
+- The API tests were flaky on `main` too (failures in 3 of 4 runs on a fresh database): files ran in
+  parallel and the unscoped `sealDue()` and `remind()` sweeps reached other files' pairs mid-test. API test
+  files now run one at a time (about 20 s); 3 of 3 runs green.
 - Defaults built and waiting for the owner (no text or numbers in the docs):
   1. Limits: 60 writes a minute per session, 30 new sessions a minute per IP, 8 KB bodies. The 10 charges a
      day of spec §7 stay on top.

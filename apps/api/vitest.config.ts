@@ -5,4 +5,6 @@ import { defineConfig } from 'vitest/config';
 const envFile = new URL('../../.env', import.meta.url);
 if (existsSync(envFile)) process.loadEnvFile(envFile);
 
-export default defineConfig({});
+// One file at a time: sealDue() and remind() sweep every pair in the database, so a sweep in one file would
+// seal or remind another file's pairs mid-test.
+export default defineConfig({ test: { fileParallelism: false } });
