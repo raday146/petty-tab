@@ -2,8 +2,10 @@ import type { Browser, Page } from '@playwright/test';
 
 // Two people are two browser contexts (two session cookies).
 
-export async function person(browser: Browser): Promise<Page> {
+export async function person(browser: Browser, { asked = true } = {}): Promise<Page> {
   const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  // The one-time notifications offer (M6) would cover the tab; settings.spec.ts opts back in.
+  if (asked) await context.addInitScript(() => localStorage.setItem('pt-asked', '1'));
   return context.newPage();
 }
 
