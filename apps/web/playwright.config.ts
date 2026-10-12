@@ -12,9 +12,17 @@ export default defineConfig({
     // art.css stops its idle loops under reduced motion, so drawings are still and comparable.
     contextOptions: { reducedMotion: 'reduce' },
   },
-  webServer: {
-    command: `next dev -p ${port}`,
-    url: `http://localhost:${port}`,
-    reuseExistingServer: !process.env.CI,
-  },
+  webServer: [
+    {
+      command: `next dev -p ${port}`,
+      url: `http://localhost:${port}`,
+      reuseExistingServer: !process.env.CI,
+    },
+    // The pairing tests need the API (and its database: `docker compose up -d db && pnpm db:migrate`).
+    {
+      command: 'pnpm --filter @petty-tab/api build && pnpm --filter @petty-tab/api start',
+      url: 'http://localhost:3001/api/health',
+      reuseExistingServer: !process.env.CI,
+    },
+  ],
 });
