@@ -197,7 +197,7 @@ Worked examples (the unit tests must include these):
   1. Persists final statuses: `pending` becomes `guilty` and unresolved `appealed` becomes `dropped`, with
      `resolved_at` set to `week_end`.
   2. Points are computed (§9). The member with more points is the **winner**; the other is **guilty**.
-  3. **Tie**: no one is guilty. The verdict is "Dead even": no sentence, a calmer card, no reel. Push to both:
+  3. **Tie** (including a week with no charges): no one is guilty. The verdict is "Dead even": no sentence, a calmer card, no reel. Push to both:
      "Dead even this week. The court is impressed."
   4. Top crimes: the three crime keys with the most counting charges against the loser, ties broken by the
      most recent charge. They are stored as crime keys; when drawing, pass the catalog's sticker key (§6:
@@ -227,7 +227,8 @@ Worked examples (the unit tests must include these):
 | Confirm | "Confirm it's served" once `served_at` is set | Same | — |
 
 The tab's "Verdict on Sunday" chip opens the latest sealed verdict. Before the pair's first verdict it is not
-a button; it reads "First verdict <weekday> 20:00".
+a button; it reads "First verdict <weekday> 20:00". A new verdict does not open by itself; the chip opens it
+(approved by the owner on 2026-10-12).
 
 ## 11. Sharing
 
@@ -309,7 +310,8 @@ GET    /verdicts/:id/card                302 to a signed PNG URL (404 until rend
 GET    /verdicts/:id/reel                302 to a signed MP4 URL (404 until rendered)
 GET    /events                           SSE stream for the pair: charge.created, charge.deleted, plea.guilty,
                                          plea.appeal, appeal.upheld, appeal.dropped, member.joined,
-                                         member.updated, member.left, verdict.* (M4). Each message is
+                                         member.updated, member.left, verdict.sealed,
+                                         verdict.updated. Each message is
                                          { type, chargeId? }; clients refetch /tab. 24 hours of silence
                                          sends plea.guilty too.
 POST   /push/subscriptions               { endpoint, keys }
@@ -325,11 +327,11 @@ OAuth, a Hebrew UI (names in Hebrew are supported), native apps, ads.
 
 | # | Question | Default used until decided |
 | --- | --- | --- |
-| 1 | What happens to appeals still unresolved at the verdict? | Dropped (benefit of the doubt). Alternative: a coin flip shown in the reel. |
+| 1 | What happens to appeals still unresolved at the verdict? | Dropped (benefit of the doubt) (approved by the owner on 2026-10-12). |
 | 2 | Does a pending charge become guilty on its own? | Yes, after 24 hours without a plea. |
 | 3 | Verdict time | Sunday 20:00 in the pair's timezone. |
-| 4 | Tie | "Dead even" card (layout default in `design.md` §6), no sentence, no reel. |
-| 5 | How long can the winner change the sentence? | Until first share or Monday 20:00. |
+| 4 | Tie | "Dead even" card (layout in `design.md` §6), no sentence, no reel (approved by the owner on 2026-10-12). A week with no charges seals as "Dead even" too. |
+| 5 | How long can the winner change the sentence? | Until first share or Monday 20:00 (approved by the owner on 2026-10-12). |
 | 6 | Account recovery when the cookie is lost | None in v1. Candidate for v1.1: a recovery link the user saves, or an emailed magic link. |
 | 7 | Filing limit | 10 charges per filer per rolling 24 hours. |
 | 8 | Monetisation | None in v1. Earlier direction: cosmetic extras ($0.99–$4.99) such as more sentences or animal outfits. |
