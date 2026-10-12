@@ -1,0 +1,180 @@
+/* design.md §6 Story preview, prototype #v5. The viewer frame is never part of the export. */
+.screen {
+  position: relative;
+  height: 100dvh;
+  overflow: hidden;
+  /* A story viewer is black whatever the app's palette. */
+  background: black;
+  color: white;
+}
+.frame {
+  position: absolute;
+  left: 0;
+  top: 54px;
+  width: 390px;
+  height: 693.34px;
+  border-radius: 14px;
+  overflow: clip;
+  background: var(--ink);
+}
+.tag {
+  position: absolute;
+  right: 12px;
+  top: 463px;
+  z-index: 4;
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 7px 12px;
+  border-radius: 11px;
+  background: white;
+  color: var(--ink);
+  font-weight: 700;
+  font-size: 15px;
+  line-height: 1;
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--ink) 20%, transparent);
+  opacity: 0;
+}
+.hit {
+  position: absolute;
+  inset: 62px 0 0;
+  z-index: 3;
+  border: 0;
+  background: none;
+  padding: 0;
+  touch-action: none;
+}
+.top {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 104px;
+  z-index: 5;
+  padding: 9px 10px 0;
+  background: linear-gradient(rgb(0 0 0 / 0.52), rgb(0 0 0 / 0));
+  transition: opacity 0.15s;
+}
+.held .top {
+  opacity: 0;
+}
+.bars {
+  display: flex;
+  gap: 4px;
+}
+.bars i {
+  flex: 1;
+  height: 2.5px;
+  border-radius: 2px;
+  background: rgb(255 255 255 / 0.42);
+  overflow: hidden;
+}
+.bars i.full,
+.bars b {
+  background: white;
+}
+.bars b {
+  display: block;
+  height: 100%;
+  transform-origin: 0 50%;
+  transform: scaleX(0);
+}
+.head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  font-size: 13.5px;
+  text-shadow: 0 1px 3px rgb(0 0 0 / 0.35);
+}
+.avatar {
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--butter);
+  overflow: hidden;
+  box-shadow: 0 0 0 1.5px white;
+}
+.avatar :global(.o),
+.avatar :global(.t) {
+  stroke-width: 4.4;
+}
+.head b {
+  font-weight: 600;
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.head span {
+  opacity: 0.8;
+}
+.head button {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  padding: 0;
+}
+.head button:first-of-type {
+  margin-inline-start: auto;
+}
+.head button svg {
+  width: 22px;
+  height: 22px;
+  filter: drop-shadow(0 1px 2px rgb(0 0 0 / 0.35));
+}
+.head button:active {
+  background: rgb(255 255 255 / 0.2);
+}
+.play {
+  position: absolute;
+  left: 50%;
+  bottom: 24px;
+  z-index: 6;
+  transform: translateX(-50%);
+  height: 44px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--mustard);
+  color: var(--ink);
+  font-weight: 600;
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.play svg {
+  width: 18px;
+  height: 18px;
+}
+.reply {
+  position: absolute;
+  inset: 747.34px 0 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 13px 16px 0;
+}
+.reply span {
+  flex: 1;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  padding: 0 18px;
+  border-radius: 999px;
+  box-shadow: inset 0 0 0 1.2px rgb(255 255 255 / 0.55);
+  font-size: 15px;
+  color: rgb(255 255 255 / 0.92);
+}
+.reply svg {
+  flex: none;
+  width: 27px;
+  height: 27px;
+  margin-top: 8.5px;
+}

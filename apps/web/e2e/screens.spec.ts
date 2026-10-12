@@ -214,3 +214,18 @@ test.describe('the verdict', () => {
     });
   }
 });
+
+test.describe('the story preview', () => {
+  // The art's loops (spirals, orbiting stars) are part of the reel, driven from t.
+  test.use({ reducedMotion: 'no-preference' });
+
+  test('matches 14 at t = 5.5', async ({ page }) => {
+    // The middle bar in the reference is 92% full: t = 5.5 of 6.
+    await open(page, 'story?t=5.5');
+    await expect(page.getByText('@alex')).toBeVisible();
+    await expect(page.getByText('maya.thecat')).toBeVisible();
+    // The reference caught its confetti at another moment of the burst (about 2.5% of pixels); the frame, the
+    // stage and the text line up.
+    await expectMatchesReference(page, '14-story-viewer.png', { maxRatio: 0.04 });
+  });
+});

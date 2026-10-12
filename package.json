@@ -7,7 +7,7 @@
     "node": ">=24"
   },
   "scripts": {
-    "dev": "pnpm --parallel --filter @petty-tab/web --filter @petty-tab/api dev",
+    "dev": "pnpm --parallel --filter @petty-tab/web --filter @petty-tab/api --filter @petty-tab/renderer dev",
     "test": "pnpm -r test",
     "e2e": "pnpm --filter @petty-tab/web e2e",
     "lint": "eslint . && prettier --check .",
