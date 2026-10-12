@@ -236,6 +236,8 @@ describe('/tab (spec §9)', () => {
         { id: dj, crime: 'dj', status: 'pending', filer: 'them' },
         { id: sip, crime: 'sip', status: 'pending', filer: 'me' },
       ],
+      hasVerdict: false,
+      unconfirmed: [],
     });
     expect((await service.tab(b)).lead).toBe(-1);
   });

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { Species } from '@petty-tab/art';
-import { CRIME_KEYS, type ChargeStatus, type CrimeKey } from './catalog.ts';
+import { CRIME_KEYS, type ChargeStatus, type CrimeKey, type SentenceKey } from './catalog.ts';
 import type { Owed } from './score.ts';
 
 /** spec §8 / Open decision 7: charges per filer per rolling 24 hours. */
@@ -62,6 +62,10 @@ export interface TabView {
   meOwed: Owed;
   themOwed: Owed;
   charges: TabCharge[];
+  /** A sealed verdict exists, so the "Verdict on Sunday" chip opens it (spec §10). */
+  hasVerdict: boolean;
+  /** Sentences not yet confirmed served, oldest first: "Alex still owes Maya: …" (spec §10). */
+  unconfirmed: { winner: string; loser: string; sentence: SentenceKey }[];
 }
 
 /** Every `/api/events` message (spec §14). Clients refetch `/api/tab` on any of them. */
@@ -74,7 +78,9 @@ export type EventType =
   | 'appeal.dropped'
   | 'member.joined'
   | 'member.updated'
-  | 'member.left';
+  | 'member.left'
+  | 'verdict.sealed'
+  | 'verdict.updated';
 
 export interface TabEvent {
   type: EventType;

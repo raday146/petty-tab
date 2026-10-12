@@ -12,8 +12,10 @@ import {
   type fileChargeBody,
   type pleaBody,
   type CrimeKey,
+  type SentenceKey,
   type Species,
   type TabView,
+  type VerdictSnapshot,
 } from '@petty-tab/shared';
 import { z } from 'zod';
 import { Clock } from './clock.js';
@@ -63,8 +65,14 @@ export class ChargesService implements OnModuleInit {
       ? await this.prisma.charge.findFirst({ where: { id, pairId: me.pairId } })
       : null;
     if (!charge) throw new ApiError(404, 'not_allowed', 'That charge is not on your tab.');
+    // spec §8: once the charge's week has ended, nothing about it changes, sealed yet or not.
+    const now = this.clock.now();
+    const joined = me.pair.members[1]!.joinedAt;
+    if (currentWeek(joined, me.pair.timezone, charge.weekStart).end <= now) {
+      throw new ApiError(409, 'week_closed', 'That week is closed.');
+    }
     const actor = charge.filerId === me.id ? ('filer' as const) : ('accused' as const);
-    return { charge, actor, age: this.clock.now().getTime() - charge.createdAt.getTime() };
+    return { charge, actor, age: now.getTime() - charge.createdAt.getTime() };
   }
 
   async file(userId: string, body: z.output<typeof fileChargeBody>): Promise<{ id: string }> {
@@ -147,10 +155,13 @@ export class ChargesService implements OnModuleInit {
 
   async tab(userId: string): Promise<TabView> {
     const { me, them, week } = await this.complete(userId);
-    const rows = await this.prisma.charge.findMany({
-      where: { pairId: me.pairId, weekStart: week.start },
-      orderBy: { createdAt: 'asc' },
-    });
+    const [rows, verdicts] = await Promise.all([
+      this.prisma.charge.findMany({
+        where: { pairId: me.pairId, weekStart: week.start },
+        orderBy: { createdAt: 'asc' },
+      }),
+      this.prisma.verdict.findMany({ where: { pairId: me.pairId }, orderBy: { weekStart: 'asc' } }),
+    ]);
     const charges = rows.map((c) => ({ ...c, crime: c.crimeKey as CrimeKey }));
     const { lead, meOwed, themOwed } = tally(charges, me.id);
     return {
@@ -165,6 +176,13 @@ export class ChargesService implements OnModuleInit {
         status: c.status,
         filer: c.filerId === me.id ? 'me' : 'them',
       })),
+      hasVerdict: verdicts.length > 0,
+      unconfirmed: verdicts
+        .filter((v) => !v.isTie && !v.confirmedAt)
+        .map((v) => {
+          const snap = v.snapshot as unknown as VerdictSnapshot;
+          return { winner: snap.winner.name, loser: snap.loser.name, sentence: v.sentenceKey as SentenceKey };
+        }),
     };
   }
 }

@@ -4,9 +4,11 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import {
   CRIMES,
   CRIME_KEYS,
+  SENTENCES,
   type ChargeStatus,
   type CrimeKey,
   type TabCharge,
+  type TabView,
   type UnitKey,
 } from '@petty-tab/shared';
 import { Art } from '@/components/Art';
@@ -39,6 +41,8 @@ interface Props {
   themOwed: Owed;
   /** This week's charges, newest first. */
   charges: TabCharge[];
+  /** Sentences still waiting for the winner's confirmation (spec §10). */
+  unconfirmed?: TabView['unconfirmed'];
   /** Files a charge against the partner; resolves to its id for Undo. Without it there is no FAB (waiting). */
   onFile?: (crime: CrimeKey) => string | Promise<string>;
   onUndo: (id: string, crime: CrimeKey) => void;
@@ -195,6 +199,11 @@ export function Tab(props: Props): ReactNode {
             bump={bump}
           />
         )}
+        {props.unconfirmed?.map((u, i) => (
+          <p key={i} className={s.owes}>
+            <bdi>{u.loser}</bdi> still owes <bdi>{u.winner}</bdi>: {SENTENCES[u.sentence].title}
+          </p>
+        ))}
       </div>
       {!inviteLink && (
         <>

@@ -126,6 +126,14 @@ button.chip:active {
   line-height: 1.4;
   color: var(--mute);
 }
+.owes {
+  margin: 12px 0 0;
+  font-size: 15px;
+  line-height: 1.4;
+  color: var(--mute);
+  text-align: center;
+  text-wrap: balance;
+}
 .newLink {
   min-height: 44px;
   border: 0;
