@@ -1,9 +1,11 @@
 // UI sounds, synthesised with Web Audio (design.md §8), recipes from the prototype's `sfx`.
-// Silent until the first user gesture, and whenever sound is switched off.
+// Silent until the first user gesture, and whenever sound is switched off (settings or the story's mute,
+// remembered on this device).
 
 let ctx: AudioContext | null = null;
 let master: AudioNode | null = null;
 let unlocked = false;
+const KEY = 'pt-sound';
 let soundOn = true;
 
 if (typeof window !== 'undefined') {
@@ -12,10 +14,24 @@ if (typeof window !== 'undefined') {
   };
   window.addEventListener('pointerdown', unlock, { once: true, capture: true });
   window.addEventListener('keydown', unlock, { once: true, capture: true });
+  try {
+    soundOn = localStorage.getItem(KEY) !== 'off';
+  } catch {
+    // Storage blocked: sound stays on for this visit.
+  }
+}
+
+export function soundIsOn(): boolean {
+  return soundOn;
 }
 
 export function setSound(on: boolean): void {
   soundOn = on;
+  try {
+    localStorage.setItem(KEY, on ? 'on' : 'off');
+  } catch {
+    // Storage blocked: the choice lasts for this visit.
+  }
 }
 
 function audio(): { ctx: AudioContext; out: AudioNode } | null {

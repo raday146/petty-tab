@@ -6,10 +6,22 @@ import { reelInput } from '@petty-tab/reel';
 import { SENTENCES, type CrimeKey, type Me, type TabView, type VerdictView } from '@petty-tab/shared';
 import { Button } from '@/components/Button';
 import { api } from '@/lib/api';
-import { registerServiceWorker } from '@/lib/pwa';
+import {
+  canInstall,
+  disablePush,
+  enablePush,
+  install,
+  isInstalled,
+  isIPhone,
+  pushState,
+  registerServiceWorker,
+  type PushState,
+} from '@/lib/pwa';
+import { setSound, sfx, soundIsOn } from '@/lib/sfx';
 import { fetchRender, shareFile, whatsAppText } from '@/lib/share';
 import { Intro } from '@/screens/Intro';
 import { Notice } from '@/screens/Notice';
+import { Sheet } from '@/components/Sheet';
 import { InviteSheet } from '@/screens/InviteSheet';
 import { Picker } from '@/screens/Picker';
 import { Story } from '@/screens/Story';
@@ -231,6 +243,7 @@ function Pair({
         }
         onEdit={() => setEditing(true)}
       />
+      {partner && <StayInTheLoop partner={partner.name} />}
       {link && (
         <InviteSheet
           open={sheet}
@@ -261,6 +274,7 @@ function Edit({ me, onDone }: { me: Me; onDone: () => void }): ReactNode {
       onSpecies={setSpecies}
       onContinue={save}
     >
+      <Settings />
       {confirm ? (
         <div className={s.confirm}>
           <p>This ends the tab for both of you.</p>
@@ -275,5 +289,118 @@ function Edit({ me, onDone }: { me: Me; onDone: () => void }): ReactNode {
         </button>
       )}
     </Picker>
+  );
+}
+
+/** design.md §8 and spec §12: this device's sound and notifications, on the edit screen (the settings). */
+function Settings(): ReactNode {
+  const [sound, setSoundOn] = useState(soundIsOn);
+  const [push, setPush] = useState<PushState>();
+  useEffect(() => void pushState().then(setPush), []);
+  const togglePush = (): void =>
+    void (push === 'on' ? disablePush() : enablePush()).then(setPush, () => pushState().then(setPush));
+  return (
+    <div className={s.settings}>
+      <div className={s.toggles}>
+        <button
+          type="button"
+          className={s.toggle}
+          aria-pressed={sound}
+          onClick={() => {
+            setSound(!sound);
+            setSoundOn(!sound);
+            if (!sound) sfx.pop();
+          }}
+        >
+          Sound: {sound ? 'on' : 'off'}
+        </button>
+        <button
+          type="button"
+          className={s.toggle}
+          aria-pressed={push === 'on'}
+          disabled={!push || push === 'unsupported' || push === 'blocked'}
+          onClick={togglePush}
+        >
+          Notifications: {push === 'on' ? 'on' : 'off'}
+        </button>
+      </div>
+      {push === 'unsupported' && (
+        <p className={s.hint}>
+          {isIPhone()
+            ? 'On iPhone, notifications work once Petty Tab is on your Home Screen.'
+            : 'This browser cannot show notifications.'}
+        </p>
+      )}
+      {push === 'blocked' && <p className={s.hint}>Notifications are blocked in your browser settings.</p>}
+    </div>
+  );
+}
+
+const ASKED = 'pt-asked';
+const asked = (): boolean => {
+  try {
+    return localStorage.getItem(ASKED) === '1';
+  } catch {
+    return true;
+  }
+};
+
+/**
+ * spec §12: once the pair completes, a one-time offer to turn notifications on. On an iPhone outside the
+ * Home Screen it explains how to add it first (push only works there); Android can install from here.
+ */
+function StayInTheLoop({ partner }: { partner: string }): ReactNode {
+  const [mode, setMode] = useState<'iphone' | 'push'>();
+  useEffect(() => {
+    if (asked()) return;
+    void pushState().then((state) => {
+      if (state === 'off') setMode('push');
+      else if (state === 'unsupported' && isIPhone() && !isInstalled()) setMode('iphone');
+    });
+  }, []);
+  const close = (): void => {
+    try {
+      localStorage.setItem(ASKED, '1');
+    } catch {
+      // Storage blocked: the offer may come back next visit.
+    }
+    setMode(undefined);
+  };
+  if (mode === 'iphone') {
+    return (
+      <Sheet
+        open
+        onClose={close}
+        title="Add Petty Tab to your Home Screen"
+        lead="On iPhone, that is how you hear about charges and the verdict: tap Share, then Add to Home Screen."
+      >
+        <Button onClick={close}>Got it</Button>
+      </Sheet>
+    );
+  }
+  return (
+    <Sheet
+      open={mode === 'push'}
+      onClose={close}
+      title="Know when you're charged"
+      lead={
+        <>
+          A ping when <bdi>{partner}</bdi> files a charge or pleads, and when the verdict is in.
+        </>
+      }
+    >
+      <div className={s.offer}>
+        <Button onClick={() => void enablePush().finally(close)}>Turn on notifications</Button>
+        {canInstall() ? (
+          <Button variant="outline" onClick={install}>
+            Install the app
+          </Button>
+        ) : (
+          <Button variant="outline" onClick={close}>
+            Not now
+          </Button>
+        )}
+      </div>
+    </Sheet>
   );
 }
