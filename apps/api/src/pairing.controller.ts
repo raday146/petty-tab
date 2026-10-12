@@ -1,5 +1,11 @@
-import { Body, Controller, Get, HttpCode, Param, Post } from '@nestjs/common';
-import { acceptInviteBody, createPairBody, type InvitePreview, type Me } from '@petty-tab/shared';
+import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post } from '@nestjs/common';
+import {
+  acceptInviteBody,
+  createPairBody,
+  updateMemberBody,
+  type InvitePreview,
+  type Me,
+} from '@petty-tab/shared';
 import { parse } from './errors.js';
 import { PairingService, type InviteLink } from './pairing.service.js';
 import { UserId } from './session.middleware.js';
@@ -42,5 +48,16 @@ export class PairingController {
     @Body() body: unknown,
   ): Promise<void> {
     return this.pairing.acceptInvite(userId, token, parse(acceptInviteBody, body));
+  }
+
+  @Patch('members/me')
+  updateMember(@UserId() userId: string, @Body() body: unknown): Promise<Me> {
+    return this.pairing.updateMember(userId, parse(updateMemberBody, body));
+  }
+
+  @Delete('pairs/current')
+  @HttpCode(204)
+  leave(@UserId() userId: string): Promise<void> {
+    return this.pairing.leave(userId);
   }
 }
