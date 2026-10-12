@@ -1,14 +1,15 @@
 'use client';
 
-import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { ORDER, type Species } from '@petty-tab/art';
-import type { CrimeKey, Me, TabView } from '@petty-tab/shared';
+import type { CrimeKey, Me, TabView, VerdictView } from '@petty-tab/shared';
 import { Button } from '@/components/Button';
 import { api } from '@/lib/api';
 import { Intro } from '@/screens/Intro';
 import { InviteSheet } from '@/screens/InviteSheet';
 import { Picker } from '@/screens/Picker';
 import { Tab } from '@/screens/Tab';
+import { Verdict } from '@/screens/Verdict';
 import s from './Home.module.css';
 
 const noop = (): void => undefined;
@@ -65,6 +66,13 @@ function Pair({
   const [editing, setEditing] = useState(false);
   const [tab, setTab] = useState<TabView>();
   const loadTab = useCallback(() => api<TabView>('/tab').then(setTab, noop), []);
+  const [verdict, setVerdict] = useState<VerdictView>();
+  // The open verdict's id, so live updates refetch it without reopening the event stream.
+  const verdictId = useRef<string>(undefined);
+  const loadVerdict = useCallback((id: string) => {
+    verdictId.current = id;
+    return api<VerdictView>(`/verdicts/${id}`).then(setVerdict, noop);
+  }, []);
 
   useEffect(() => {
     if (partner) void loadTab();
@@ -77,11 +85,12 @@ function Pair({
     const sync = (): void => {
       void refresh();
       void loadTab();
+      if (verdictId.current) void loadVerdict(verdictId.current);
     };
     events.onmessage = sync;
     events.onopen = sync;
     return () => events.close();
-  }, [refresh, loadTab]);
+  }, [refresh, loadTab, loadVerdict]);
 
   /** The viewer's own writes refetch too, so the tab stays right even if the stream drops. */
   const write = (path: string, init?: { method?: string; body?: unknown }): void =>
@@ -92,6 +101,31 @@ function Pair({
     return id;
   };
 
+  if (verdict) {
+    const v = `/verdicts/${verdict.id}`;
+    const act = (path: string, init?: { method?: string; body?: unknown }): Promise<void> =>
+      api(`${v}${path}`, init ?? { method: 'POST' }).then(
+        () => loadVerdict(verdict.id),
+        () => loadVerdict(verdict.id),
+      );
+    return (
+      <Verdict
+        verdict={{ ...verdict, sentence: verdict.sentence ?? 'coffee7' }}
+        viewer={verdict.viewer}
+        onBack={() => {
+          verdictId.current = undefined;
+          setVerdict(undefined);
+          void loadTab();
+        }}
+        onSentence={(sentenceKey) => void act('/sentence', { method: 'PATCH', body: { sentenceKey } })}
+        // spec §10: the share call goes first, so the winner's first share locks the sentence.
+        // ponytail: the share sheet itself (card and reel files) arrives with the renders in M5.
+        onShare={() => void act('/shared')}
+        onServed={() => void act('/served')}
+        onConfirm={() => void act('/confirm')}
+      />
+    );
+  }
   if (editing) return <Edit me={me} onDone={() => refresh().then(() => setEditing(false))} />;
   return (
     <>
@@ -99,16 +133,18 @@ function Pair({
         me={member}
         them={partner ?? member}
         inviteLink={partner ? undefined : (link ?? '')}
-        firstVerdictDay="Sunday"
+        // The first week always ends on a Sunday (spec §10).
+        firstVerdictDay={tab?.hasVerdict ? undefined : 'Sunday'}
         lead={tab?.lead ?? 0}
         meOwed={tab?.meOwed ?? []}
         themOwed={tab?.themOwed ?? []}
         charges={tab?.charges ?? []}
+        unconfirmed={tab?.unconfirmed}
         onFile={partner ? file : undefined}
         onUndo={(id) => write(`/charges/${id}`, { method: 'DELETE' })}
         onPlea={(id, plea) => write(`/charges/${id}/plea`, { body: { plea } })}
         onDecide={(id, decision) => write(`/charges/${id}/appeal`, { body: { decision } })}
-        onVerdict={noop}
+        onVerdict={() => void loadVerdict('latest')}
         onNewLink={() =>
           api<{ link: string }>('/pairs/invite', { method: 'POST' }).then(
             ({ link }) => setLink(fullLink(link)),
