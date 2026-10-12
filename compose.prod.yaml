@@ -1,0 +1,101 @@
+# Production on one server: docker compose -f compose.prod.yaml up -d --build (runbook in docs/plan.md M7).
+# Reads .env next to this file: DOMAIN, POSTGRES_PASSWORD, INVITE_KEY, FILES_KEY and VAPID_* (see .env.example).
+
+x-logs: &logs
+  logging:
+    driver: json-file
+    options: { max-size: 10m, max-file: '5' }
+
+x-app: &app
+  <<: *logs
+  restart: unless-stopped
+  env_file: .env
+  environment:
+    DATABASE_URL: postgresql://petty:${POSTGRES_PASSWORD}@db:5432/petty_tab
+    STORAGE_DIR: /storage
+    WEB_URL: http://web:3000
+  depends_on:
+    db: { condition: service_healthy }
+
+services:
+  db:
+    <<: *logs
+    image: postgres:18
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: petty
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: petty_tab
+    volumes: [db:/var/lib/postgresql]
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U petty -d petty_tab']
+      interval: 5s
+      retries: 20
+
+  api:
+    <<: *app
+    build: { context: ., target: api }
+    volumes: [storage:/storage]
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://localhost:3001/api/health').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))",
+        ]
+      interval: 30s
+      start_period: 30s
+
+  web:
+    <<: *app
+    build:
+      context: .
+      target: web
+      args: { VAPID_PUBLIC_KEY: '${VAPID_PUBLIC_KEY:-}' }
+
+  renderer:
+    <<: *app
+    build: { context: ., target: renderer }
+    volumes: [storage:/storage]
+
+  caddy:
+    <<: *logs
+    image: caddy:2
+    restart: unless-stopped
+    environment:
+      DOMAIN: ${DOMAIN:?set DOMAIN in .env}
+    ports: ['80:80', '443:443', '443:443/udp']
+    volumes:
+      - ./ops/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy:/data
+    depends_on: [web]
+
+  # Nightly at 03:00 UTC: a pg_dump and a storage archive, a restore check into a scratch database, 14 kept.
+  backup:
+    <<: *logs
+    image: postgres:18
+    restart: unless-stopped
+    environment:
+      PGHOST: db
+      PGUSER: petty
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      PGDATABASE: petty_tab
+    volumes:
+      - ./ops/backup.sh:/backup.sh:ro
+      - backups:/backups
+      - storage:/storage:ro
+    command:
+      [
+        'sh',
+        '-c',
+        'while sleep $$(( (86400 + 10800 - $$(date +%s) % 86400) % 86400 + 1 )); do sh /backup.sh; done',
+      ]
+    depends_on:
+      db: { condition: service_healthy }
+
+volumes:
+  db:
+  storage:
+  backups:
+  caddy:
