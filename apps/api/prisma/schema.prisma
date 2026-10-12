@@ -1,4 +1,4 @@
-// Models arrive in M2 (spec §13).
+// spec §13. IDs are UUIDv7 from Postgres 18's uuidv7(); times are UTC.
 
 generator client {
   provider            = "prisma-client"
@@ -9,4 +9,71 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+}
+
+model User {
+  id         String    @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  lastSeenAt DateTime  @default(now()) @map("last_seen_at") @db.Timestamptz
+  sessions   Session[]
+  members    Member[]
+
+  @@map("users")
+}
+
+model Session {
+  id        String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// sha256 hex of the cookie value; the value itself is never stored.
+  tokenHash String   @unique @map("token_hash")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  expiresAt DateTime @map("expires_at") @db.Timestamptz
+
+  @@map("sessions")
+}
+
+model Pair {
+  id        String    @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  timezone  String
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  endedAt   DateTime? @map("ended_at") @db.Timestamptz
+  members   Member[]
+  invites   Invite[]
+
+  @@map("pairs")
+}
+
+model Member {
+  id          String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  pairId      String   @map("pair_id") @db.Uuid
+  pair        Pair     @relation(fields: [pairId], references: [id], onDelete: Cascade)
+  userId      String   @map("user_id") @db.Uuid
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  displayName String   @map("display_name")
+  species     String
+  joinedAt    DateTime @default(now()) @map("joined_at") @db.Timestamptz
+  invites     Invite[]
+
+  @@unique([pairId, species])
+  @@index([userId])
+  @@map("members")
+}
+
+model Invite {
+  id        String    @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  pairId    String    @map("pair_id") @db.Uuid
+  pair      Pair      @relation(fields: [pairId], references: [id], onDelete: Cascade)
+  /// sha256 hex of the token, for lookup.
+  tokenHash String    @unique @map("token_hash")
+  /// AES-256-GCM of the token with INVITE_KEY, so the waiting card can show the same link again.
+  tokenEnc  String    @map("token_enc")
+  createdBy String    @map("created_by") @db.Uuid
+  creator   Member    @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+  expiresAt DateTime  @map("expires_at") @db.Timestamptz
+  usedAt    DateTime? @map("used_at") @db.Timestamptz
+  revokedAt DateTime? @map("revoked_at") @db.Timestamptz
+
+  @@index([pairId])
+  @@map("invites")
 }
