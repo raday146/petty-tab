@@ -19,6 +19,7 @@
   },
   "dependencies": {
     "@petty-tab/art": "workspace:*",
+    "@petty-tab/reel": "workspace:*",
     "@petty-tab/shared": "workspace:*",
     "next": "16.4.0",
     "react": "19.3.0",
