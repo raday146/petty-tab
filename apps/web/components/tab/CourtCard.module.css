@@ -1,0 +1,47 @@
+/* design.md §5 Plea card / Appeal card, prototype .plea and .ask */
+.card {
+  background: var(--butter);
+  border-radius: 26px;
+  padding: 8px 16px 16px;
+  margin-bottom: 10px;
+}
+.ask {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+}
+.ask p {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-size: 14.5px;
+}
+.ask bdi {
+  font-weight: 600;
+}
+.ask button {
+  flex: none;
+  height: 40px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--paper);
+  font-weight: 600;
+  font-size: 14.5px;
+  transition:
+    transform 0.08s,
+    background 0.12s,
+    color 0.12s;
+}
+.ask button.outline {
+  background: transparent;
+  color: var(--ink);
+  box-shadow: inset 0 0 0 1.5px var(--ink);
+}
+.ask button:active {
+  transform: scale(0.93);
+  background: var(--mustard);
+  color: var(--ink);
+}

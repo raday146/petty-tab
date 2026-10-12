@@ -1,0 +1,47 @@
+/* design.md §5 Pill, prototype .pill */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 30px;
+  padding: 0 12px 0 8px;
+  border-radius: 999px;
+  background: var(--butter);
+  color: var(--ink);
+  font-weight: 600;
+  font-size: 13px;
+  line-height: 1;
+  white-space: nowrap;
+}
+.paper {
+  background: var(--paper);
+}
+.icon {
+  width: 18px;
+  height: 18px;
+  flex: none;
+}
+.icon :global(.o),
+.icon :global(.t) {
+  stroke-width: 3.6;
+}
+.bump {
+  animation: bump 0.45s cubic-bezier(0.2, 1.8, 0.4, 1);
+}
+@keyframes bump {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.18) rotate(-4deg);
+    background: var(--mustard);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bump {
+    animation: none;
+  }
+}

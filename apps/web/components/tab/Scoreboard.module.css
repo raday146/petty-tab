@@ -1,0 +1,119 @@
+/* design.md §5 Scoreboard and Rope, prototype .score */
+.score {
+  margin-top: 20px;
+  background: var(--paper);
+  border-radius: 30px;
+  padding: 24px 20px 20px;
+}
+.duel {
+  display: grid;
+  grid-template-columns: 100px 1fr 100px;
+  align-items: start;
+}
+.player {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  min-width: 0;
+}
+.sticker {
+  /* the prototype's `.pl span` rule also lands on the avatar wrapper; the approved layout includes it */
+  margin-top: 3px;
+}
+.name {
+  margin-top: 10px;
+  max-width: 100%;
+  font-weight: 700;
+  font-size: 18px;
+  line-height: 1.15;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.long {
+  font-size: 15px;
+}
+.tag {
+  margin-top: 3px;
+  font-size: 13px;
+  color: var(--mute);
+}
+.mid {
+  padding: 23px 2px 0;
+  text-align: center;
+  min-width: 0;
+}
+.rope {
+  position: relative;
+  height: 24px;
+}
+.rope::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 10.5px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--ink);
+  opacity: 0.16;
+}
+.rope::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 3px;
+  width: 3px;
+  height: 18px;
+  margin-left: -1.5px;
+  border-radius: 2px;
+  background: var(--ink);
+  opacity: 0.16;
+}
+.marker {
+  position: absolute;
+  z-index: 1;
+  top: 2px;
+  width: 20px;
+  height: 20px;
+  margin-left: -10px;
+  border-radius: 50%;
+  background: var(--mustard);
+  box-shadow: 0 0 0 2.5px var(--ink);
+  transition: left 0.55s var(--ease-press);
+}
+.lead {
+  margin: 12px 0 0;
+  font-weight: 600;
+  font-size: 14px;
+  line-height: 1.3;
+  text-wrap: balance;
+}
+.owed {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 20px;
+  padding-top: 18px;
+  border-top: 1.5px dashed var(--line);
+}
+.owedLabel {
+  margin: 0 0 9px;
+  font-size: 13.5px;
+  color: var(--mute);
+}
+.owedLabel bdi {
+  font-weight: 600;
+  color: var(--ink);
+}
+.pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .marker {
+    transition: none;
+  }
+}
