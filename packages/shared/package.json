@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },
-  "devDependencies": {
-    "@petty-tab/art": "workspace:*"
+  "dependencies": {
+    "@petty-tab/art": "workspace:*",
+    "zod": "4.6.5"
   }
 }
