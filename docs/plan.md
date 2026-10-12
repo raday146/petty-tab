@@ -198,7 +198,7 @@ Notes from M3:
 - Dev-screen screenshot ratios are unchanged from M1/M2.
 
 ## M4 · The Sunday verdict
-Status: done (`feat/m4-sunday-verdict`), awaiting review
+Status: done (`feat/m4-sunday-verdict`); defaults approved by the owner on 2026-10-12
 
 - Week windows in the pair timezone (spec §10), sealing job every 5 minutes (pg-boss), idempotent sealing,
   verdict snapshot, top crimes, seeded random sentence, sentence change window and lock, served / confirmed
@@ -231,7 +231,7 @@ Done when:
       (`verdict.spec.ts` "Maya wins the week…" seals real charges and passes `expectMatchesReference` on
       `12-verdict-card.png` at the default tolerance; the loser's phone also reads "Maya vs. Alex")
 - [x] If the owner has not approved the tie layout by then, the default is built and flagged in the summary
-      (the `design.md` §6 default; still unapproved, flagged in the M4 summary)
+      (the `design.md` §6 default, approved by the owner on 2026-10-12 with the other M4 defaults)
 
 Notes from M4:
 - `verdicts` has a unique `(pair_id, week_start)`; the sealer inserts with `ON CONFLICT DO NOTHING` inside the
