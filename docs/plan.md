@@ -152,7 +152,7 @@ spec §14 changes):
    When the visitor's own pair is still waiting there is no partner name, so it reads "You already have a tab."
 
 ## M3 · The tab
-Status: done (`feat/m3-the-tab`), awaiting review
+Status: done (PR #4, `feat/m3-the-tab`, merged 2026-10-12)
 
 - Crime catalog in `packages/shared`; filing, undo within 10s, 24-hour filing limit; pleas and appeal
   resolution with the state machine of spec §8; auto-guilty after 24 hours (job).
