@@ -42,7 +42,10 @@ export class VerdictsService implements OnModuleInit {
     await this.jobs.start();
     await this.jobs.boss.work(QUEUES.seal, () => this.sealDue());
     await this.jobs.boss.schedule(QUEUES.seal, '*/5 * * * *');
-    await this.jobs.boss.work<RenderedJob>(QUEUES.rendered, ([job]) => this.rendered(job!.data));
+    // Cheap updates: take them in batches so a renderer catching up never queues behind a 2 s poll per job.
+    await this.jobs.boss.work<RenderedJob>(QUEUES.rendered, { batchSize: 20 }, async (batch) => {
+      for (const job of batch) await this.rendered(job.data);
+    });
   }
 
   /**

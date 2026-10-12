@@ -392,23 +392,24 @@ export function tracks(g: Geometry) {
         [5.25, 1],
       ],
     },
-    /** Story preview only, never exported. */
-    tag: {
-      o: [
-        [3.7, 0],
-        [3.84, 1],
-      ],
-      s: [
-        [3.7, 0.6],
-        [3.9, 1, 'back'],
-      ],
-      r: () => -4,
-      origin: '50% 50%',
-    },
   } satisfies Record<string, Track>;
 }
 
 export type Layer = keyof ReturnType<typeof tracks>;
+
+/** The story preview's mention tag (reel.md §5): part of the viewer frame, never exported. */
+export const TAG: Track = {
+  o: [
+    [3.7, 0],
+    [3.84, 1],
+  ],
+  s: [
+    [3.7, 0.6],
+    [3.9, 1, 'back'],
+  ],
+  r: () => -4,
+  origin: '50% 50%',
+};
 
 /** The inline style a track gives its layer at t. */
 export function style(

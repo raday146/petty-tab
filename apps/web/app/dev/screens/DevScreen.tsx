@@ -3,12 +3,14 @@
 import { useState, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { ORDER, type Species } from '@petty-tab/art';
+import { reelInput } from '@petty-tab/reel';
 import { CRIMES, type CrimeKey } from '@petty-tab/shared';
 import type { Member, Owed } from '@/components/tab/Scoreboard';
 import { Intro } from '@/screens/Intro';
 import { InviteSheet } from '@/screens/InviteSheet';
 import { Picker } from '@/screens/Picker';
 import { Tab, type TabCharge } from '@/screens/Tab';
+import { Story } from '@/screens/Story';
 import { Verdict } from '@/screens/Verdict';
 import * as mock from './mocks';
 
@@ -20,7 +22,7 @@ const species = (value: string | undefined, fallback: Species): Species =>
 /**
  * Holds mock state for one screen; M2+ replace this with real data.
  * `?me=&meSp=&them=&themSp=` swap the household; on `verdict`, `?view=` is winner (default), loser, locked,
- * served (loser marked it), confirmed or tie.
+ * served (loser marked it), confirmed or tie. On `story`, `?t=` holds the reel at that time (default 5.5).
  */
 export function DevScreen({ name, query }: { name: mock.ScreenName; query: Query }): ReactNode {
   const router = useRouter();
@@ -48,6 +50,16 @@ export function DevScreen({ name, query }: { name: mock.ScreenName; query: Query
       return <TabDemo me={me} them={them} week={[]} score={mock.SCORE} waiting />;
     case 'verdict':
       return <VerdictDemo me={me} them={them} view={query.view} />;
+    case 'story':
+      return (
+        <Story
+          reel={reelInput({ ...mock.VERDICT, winner: me, loser: them })}
+          viewer={me}
+          partner={them}
+          still={Number(query.t ?? 5.5)}
+          onClose={() => go('verdict')}
+        />
+      );
   }
 }
 

@@ -2,12 +2,15 @@
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { ORDER, type Species } from '@petty-tab/art';
-import type { CrimeKey, Me, TabView, VerdictView } from '@petty-tab/shared';
+import { reelInput } from '@petty-tab/reel';
+import { SENTENCES, type CrimeKey, type Me, type TabView, type VerdictView } from '@petty-tab/shared';
 import { Button } from '@/components/Button';
 import { api } from '@/lib/api';
+import { fetchRender, shareFile, whatsAppText } from '@/lib/share';
 import { Intro } from '@/screens/Intro';
 import { InviteSheet } from '@/screens/InviteSheet';
 import { Picker } from '@/screens/Picker';
+import { Story } from '@/screens/Story';
 import { Tab } from '@/screens/Tab';
 import { Verdict } from '@/screens/Verdict';
 import s from './Home.module.css';
@@ -73,6 +76,25 @@ function Pair({
     verdictId.current = id;
     return api<VerdictView>(`/verdicts/${id}`).then(setVerdict, noop);
   }, []);
+  const [story, setStory] = useState(false);
+  // spec §11: the rendered files of the open verdict's current sentence, fetched as soon as they are ready,
+  // because the share sheet only opens from the tap itself.
+  const [files, setFiles] = useState<{ of?: string; card?: File; reel?: File }>({});
+  const of = verdict && `${verdict.id}:${verdict.sentence}`;
+  const cardReady = !!verdict?.card;
+  const reelReady = !!verdict?.reel;
+  useEffect(() => {
+    if (!of) return;
+    const [id] = of.split(':') as [string];
+    for (const kind of ['card', 'reel'] as const) {
+      if (!(kind === 'card' ? cardReady : reelReady)) continue;
+      void fetchRender(id, kind).then(
+        (file) => setFiles((f) => ({ ...(f.of === of ? f : {}), of, [kind]: file })),
+        noop,
+      );
+    }
+  }, [of, cardReady, reelReady]);
+  const ready = files.of === of ? files : {};
 
   useEffect(() => {
     if (partner) void loadTab();
@@ -108,19 +130,40 @@ function Pair({
         () => loadVerdict(verdict.id),
         () => loadVerdict(verdict.id),
       );
+    const sentence = verdict.sentence ?? 'coffee7';
+    if (story && partner) {
+      return (
+        <Story
+          reel={reelInput({ ...verdict, sentence })}
+          viewer={member}
+          partner={partner}
+          onClose={() => setStory(false)}
+        />
+      );
+    }
     return (
       <Verdict
-        verdict={{ ...verdict, sentence: verdict.sentence ?? 'coffee7' }}
+        verdict={{ ...verdict, sentence }}
         viewer={verdict.viewer}
+        ready={{ card: !!ready.card, reel: !!ready.reel }}
         onBack={() => {
+          setStory(false);
           verdictId.current = undefined;
           setVerdict(undefined);
           void loadTab();
         }}
         onSentence={(sentenceKey) => void act('/sentence', { method: 'PATCH', body: { sentenceKey } })}
-        // spec §10: the share call goes first, so the winner's first share locks the sentence.
-        // ponytail: the share sheet itself (card and reel files) arrives with the renders in M5.
-        onShare={() => void act('/shared')}
+        onShare={(target) => {
+          // spec §10: the share call goes first, so the winner's first share locks the sentence. It is not
+          // awaited: the share sheet has to open inside this tap.
+          void act('/shared');
+          const file = target === 'card' ? ready.card : ready.reel;
+          if (!file) return;
+          if (target === 'story') setStory(true);
+          if (target === 'whatsapp' && !navigator.canShare?.({ files: [file] })) {
+            whatsAppText(`${verdict.loser.name} owes ${verdict.winner.name}: ${SENTENCES[sentence].title}`);
+          } else shareFile(file);
+        }}
         onServed={() => void act('/served')}
         onConfirm={() => void act('/confirm')}
       />
