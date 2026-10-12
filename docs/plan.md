@@ -304,7 +304,8 @@ Notes from M5:
   the full run.
 
 ## M6 · PWA and notifications
-Status: in review (`feat/m6-pwa-push`); defaults below wait for the owner
+Status: in review (`feat/m6-pwa-push`); defaults approved by the owner on 2026-10-12, real-phone push check
+on staging approved as deferred
 
 - Web app manifest (name, theme colours, icons from the coffee-cup crown), service worker with an offline
   shell, an install hint (with the iPhone "Add to Home Screen" steps).
@@ -320,7 +321,8 @@ Done when:
 - [ ] Push arrives on an installed iPhone (iOS 16.4 or later) and on Android for each event in spec §12
       (server side verified: `apps/api/src/push.service.test.ts` sends each §12 event to the right member once,
       batches charges, skips undone ones, forgets gone subscriptions and reminds on Wednesday 19:00 local.
-      Delivery to real phones needs HTTPS, so it waits for the staging deployment, as the M5 share check did)
+      Delivery to real phones needs HTTPS, so it waits for the staging deployment, as the M5 share check did;
+      the owner approved this deferral on 2026-10-12)
 - [x] Opening the app offline shows the shell and a clear offline message, not an error page
       (`pwa.spec.ts` "opened offline, the app shows its shell and says it is offline; back online it carries
       on", against a production build)
@@ -344,7 +346,7 @@ Notes from M6:
 - Sound: the recipes were already in `lib/sfx.ts`; M6 adds the setting. "Sound: on/off" and
   "Notifications: on/off" pills sit on the edit screen (the app's settings) above "Leave the tab". The sound
   choice is remembered per device and shared with the story preview's mute.
-- Defaults built and waiting for the owner (no text or screen in the docs):
+- Defaults built without text or screens in the docs, all approved by the owner on 2026-10-12:
   1. Batched charge push: "Maya filed 3 charges: Trash Jenga, The Phantom Sip and 1 more."
   2. Reminder: "You still owe Maya: <sentence>." every Wednesday 19:00 local while the sentence is neither
      served nor confirmed (once served, the loser is waiting on the winner, so no reminder).
