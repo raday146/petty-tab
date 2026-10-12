@@ -52,7 +52,15 @@ export async function renderReel(page: Page, out: string): Promise<string[]> {
   const hashes: string[] = [];
   try {
     for (let i = 0; i < FRAMES; i++) {
-      await page.evaluate((t) => window.__reel!.seek(t), i / FPS);
+      // Two animation frames after seek: a layer that just became visible is painted before the screenshot.
+      await page.evaluate(
+        (t) =>
+          new Promise<void>((done) => {
+            window.__reel!.seek(t);
+            requestAnimationFrame(() => requestAnimationFrame(() => done()));
+          }),
+        i / FPS,
+      );
       const png = await page.screenshot({ type: 'png' });
       hashes.push(createHash('sha256').update(png).digest('hex'));
       if (!ffmpeg.stdin.write(png)) await once(ffmpeg.stdin, 'drain');
