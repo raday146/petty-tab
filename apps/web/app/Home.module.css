@@ -22,3 +22,37 @@
   color: var(--mute);
   font-size: 15px;
 }
+
+/* M6: sound and notifications on the edit screen (no design.md screen; the prototype's "Sound: on" pill). */
+.settings {
+  margin-top: 12px;
+  text-align: center;
+}
+.toggles {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+.toggle {
+  border: 1.5px solid var(--line);
+  background: var(--paper);
+  color: var(--ink);
+  border-radius: 999px;
+  padding: 7px 14px;
+  font-weight: 600;
+  font-size: 13px;
+}
+.toggle:disabled {
+  color: var(--mute);
+}
+.hint {
+  margin: 8px 0 0;
+  color: var(--mute);
+  font-size: 13px;
+}
+
+/* M6: the one-time notifications offer. */
+.offer {
+  display: grid;
+  gap: 10px;
+}

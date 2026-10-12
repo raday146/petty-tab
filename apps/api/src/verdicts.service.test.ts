@@ -7,6 +7,7 @@ import { Jobs, QUEUES } from './jobs.js';
 import { verifyFile } from './crypto.js';
 import { PairingService } from './pairing.service.js';
 import { PrismaService } from './prisma.service.js';
+import { PushService } from './push.service.js';
 import { VerdictsService } from './verdicts.service.js';
 
 // Real database, injected clock. Every test makes its own pair; workers are not registered, so the sealer
@@ -14,18 +15,20 @@ import { VerdictsService } from './verdicts.service.js';
 const prisma = new PrismaService();
 const jobs = new Jobs();
 beforeAll(() => jobs.start());
-// The renders these tests queue would otherwise wait for a local renderer to draw them.
+// The renders and pushes these tests queue would otherwise wait for a local renderer or API to send them.
 afterAll(async () => {
   await jobs.boss.deleteQueuedJobs(QUEUES.render);
+  await jobs.boss.deleteQueuedJobs(QUEUES.push);
   await Promise.all([prisma.$disconnect(), jobs.onModuleDestroy()]);
 });
 
 let now: Date;
 const clock = { now: () => now } as Clock;
 const events = new Events();
-const pairing = new PairingService(prisma, clock, events);
-const charges = new ChargesService(prisma, clock, pairing, jobs, events);
-const verdicts = new VerdictsService(prisma, clock, pairing, jobs, events);
+const push = new PushService(prisma, clock, jobs);
+const pairing = new PairingService(prisma, clock, events, push);
+const charges = new ChargesService(prisma, clock, pairing, jobs, events, push);
+const verdicts = new VerdictsService(prisma, clock, pairing, jobs, events, push);
 
 const at = (iso: string): Date => new Date(iso);
 const plus = (t: Date, s: number): Date => new Date(t.getTime() + s * 1000);

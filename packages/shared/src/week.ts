@@ -19,9 +19,9 @@ function wall(t: Date, tz: string): { y: number; m: number; d: number; ms: numbe
   return { y, m, d, ms: Date.UTC(y, m - 1, d, n('hour'), n('minute'), n('second')) };
 }
 
-/** The instant when the wall clock in `tz` reads day `d` (may overflow the month) at 20:00. */
-function turnover(y: number, m: number, d: number, tz: string): Date {
-  const local = Date.UTC(y, m - 1, d, TURNOVER_HOUR);
+/** The instant when the wall clock in `tz` reads day `d` (may overflow the month) at `hour` (20:00). */
+function turnover(y: number, m: number, d: number, tz: string, hour = TURNOVER_HOUR): Date {
+  const local = Date.UTC(y, m - 1, d, hour);
   // Guess with the offset at the local time read as UTC, then correct once with the offset at the guess.
   const offsetAt = (t: number): number => wall(new Date(t), tz).ms - Math.floor(t / 1000) * 1000;
   const guess = local - offsetAt(local);
@@ -71,4 +71,12 @@ export function endedWeeks(
 export function sentenceDeadline(weekEnd: Date, tz: string): Date {
   const { y, m, d } = wall(weekEnd, tz);
   return turnover(y, m, d + 1, tz);
+}
+
+/** spec §12: the latest Wednesday 19:00 in `tz` at or before `now` (the sentence reminder). */
+export function lastReminderTime(tz: string, now: Date): Date {
+  const { y, m, d } = wall(now, tz);
+  const wednesday = d - ((new Date(Date.UTC(y, m - 1, d)).getUTCDay() + 4) % 7);
+  const candidate = turnover(y, m, wednesday, tz, 19);
+  return candidate <= now ? candidate : turnover(y, m, wednesday - 7, tz, 19);
 }
