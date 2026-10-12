@@ -18,6 +18,7 @@ import {
 import { z } from 'zod';
 import { Clock } from './clock.js';
 import { ApiError } from './errors.js';
+import { Events } from './events.js';
 import { Jobs, QUEUES } from './jobs.js';
 import { PairingService } from './pairing.service.js';
 import { PrismaService } from './prisma.service.js';
@@ -34,6 +35,7 @@ export class ChargesService implements OnModuleInit {
     private readonly clock: Clock,
     private readonly pairing: PairingService,
     private readonly jobs: Jobs,
+    private readonly events: Events,
   ) {}
 
   async onModuleInit(): Promise<void> {
@@ -88,6 +90,7 @@ export class ChargesService implements OnModuleInit {
     });
     // spec §8: the accused's push waits out the undo window; the job id is the charge id, so undo can cancel it.
     await this.jobs.boss.send(QUEUES.chargePush, { chargeId: id }, { id, startAfter: UNDO_MS / 1000 });
+    this.events.emit(me.pairId, 'charge.created', id);
     return { id };
   }
 
@@ -99,6 +102,7 @@ export class ChargesService implements OnModuleInit {
     const { count } = await this.prisma.charge.deleteMany({ where: { id, status: 'pending' } });
     if (count !== 1) throw conflict('already_pleaded');
     await this.jobs.boss.cancel(QUEUES.chargePush, id);
+    this.events.emit(charge.pairId, 'charge.deleted', id);
   }
 
   /**
@@ -107,10 +111,12 @@ export class ChargesService implements OnModuleInit {
    */
   async autoGuilty(): Promise<{ id: string; pairId: string }[]> {
     const cutoff = new Date(this.clock.now().getTime() - PLEA_MS);
-    return this.prisma.$queryRaw`
+    const flipped = await this.prisma.$queryRaw<{ id: string; pairId: string }[]>`
       UPDATE charges SET status = 'guilty', resolved_at = created_at + interval '24 hours'
       WHERE status = 'pending' AND created_at <= ${cutoff}
       RETURNING id, pair_id AS "pairId"`;
+    for (const c of flipped) this.events.emit(c.pairId, 'plea.guilty', c.id);
+    return flipped;
   }
 
   async plead(userId: string, id: string, body: z.output<typeof pleaBody>): Promise<void> {
@@ -124,6 +130,7 @@ export class ChargesService implements OnModuleInit {
       data: { status: next.status, pleadedAt: now, resolvedAt: next.status === 'guilty' ? now : null },
     });
     if (count !== 1) throw conflict('already_pleaded');
+    this.events.emit(charge.pairId, body.plea === 'guilty' ? 'plea.guilty' : 'plea.appeal', id);
   }
 
   async decide(userId: string, id: string, body: z.output<typeof appealBody>): Promise<void> {
@@ -135,6 +142,7 @@ export class ChargesService implements OnModuleInit {
       data: { status: next.status, resolvedAt: this.clock.now() },
     });
     if (count !== 1) throw notAllowed();
+    this.events.emit(charge.pairId, body.decision === 'uphold' ? 'appeal.upheld' : 'appeal.dropped', id);
   }
 
   async tab(userId: string): Promise<TabView> {

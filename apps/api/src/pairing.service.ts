@@ -13,6 +13,7 @@ import type { z } from 'zod';
 import { Clock } from './clock.js';
 import { decrypt, encrypt, newToken, sha256 } from './crypto.js';
 import { ApiError } from './errors.js';
+import { Events } from './events.js';
 import { Prisma } from './generated/prisma/client.js';
 import { PrismaService } from './prisma.service.js';
 
@@ -36,6 +37,7 @@ export class PairingService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly clock: Clock,
+    private readonly events: Events,
   ) {}
 
   /** The user's member row in their active (not ended) pair, with both members. */
@@ -115,7 +117,7 @@ export class PairingService {
   async acceptInvite(userId: string, token: string, body: z.output<typeof acceptInviteBody>): Promise<void> {
     const now = this.clock.now();
     try {
-      await this.prisma.$transaction(async (tx) => {
+      const pairId = await this.prisma.$transaction(async (tx) => {
         if (await tx.member.findFirst({ where: { userId, pair: { endedAt: null } } })) throw alreadyInPair();
         const invite = await tx.invite.findUnique({ where: { tokenHash: sha256(token) } });
         // Single use: only one accept can flip used_at, so a pair never gets a third member.
@@ -135,7 +137,9 @@ export class PairingService {
         await tx.member.create({
           data: { pairId: invite.pairId, userId, displayName: body.name, species: body.species },
         });
+        return invite.pairId;
       });
+      this.events.emit(pairId, 'member.joined');
     } catch (e) {
       // unique (pair_id, species): the inviter's animal (the link stays usable, the transaction rolled back).
       if (isUniqueViolation(e)) throw speciesTaken();
@@ -155,6 +159,7 @@ export class PairingService {
       if (isUniqueViolation(e)) throw speciesTaken();
       throw e;
     }
+    this.events.emit(member.pairId, 'member.updated');
     return this.me(userId);
   }
 
@@ -169,6 +174,7 @@ export class PairingService {
         data: { revokedAt: now },
       }),
     ]);
+    this.events.emit(member.pairId, 'member.left');
   }
 
   /** The caller's member row with the pair and both members; `not_in_pair` otherwise. */

@@ -2,6 +2,7 @@ import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import { INVITE_TTL_MS, type Species } from '@petty-tab/shared';
 import type { Clock } from './clock.js';
 import { sha256 } from './crypto.js';
+import { Events } from './events.js';
 import { PairingService } from './pairing.service.js';
 import { PrismaService } from './prisma.service.js';
 
@@ -10,7 +11,7 @@ const prisma = new PrismaService();
 afterAll(() => prisma.$disconnect());
 
 let now: Date;
-const service = new PairingService(prisma, { now: () => now } as Clock);
+const service = new PairingService(prisma, { now: () => now } as Clock, new Events());
 beforeEach(() => {
   now = new Date('2026-10-12T10:00:00Z');
 });
