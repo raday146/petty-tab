@@ -1,30 +1,7 @@
-import { expect, test, type Browser, type Page } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
+import { path, person, pick, startTab } from './people';
 
 // spec §4 end to end: two people, two browser contexts (two cookies), one tab.
-
-async function person(browser: Browser): Promise<Page> {
-  const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
-  return context.newPage();
-}
-
-async function pick(page: Page, name: string, animal: RegExp): Promise<void> {
-  await page.getByRole('textbox').fill(name);
-  await page.getByRole('button', { name: animal }).first().click();
-  await page.getByRole('button', { name: /^Continue as/ }).click();
-}
-
-/** A starts a tab and returns the invite link from the invite sheet. */
-async function startTab(page: Page, name: string, animal: RegExp): Promise<string> {
-  await page.goto('/');
-  await page.getByRole('button', { name: 'Start a tab' }).click();
-  await pick(page, name, animal);
-  const sheet = page.getByRole('dialog');
-  const link = await sheet.getByText('/j/').textContent();
-  await sheet.getByRole('button', { name: 'Open our tab' }).click();
-  return `https://${link}`;
-}
-
-const path = (link: string): string => new URL(link).pathname;
 
 test('A starts a tab, B joins with another animal, both see the pair', async ({ browser }) => {
   const a = await person(browser);
