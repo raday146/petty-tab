@@ -362,7 +362,8 @@ Notes from M6:
   branch: 2 and 4 in two runs, different tests each time). Every spec passes when run on its own.
 
 ## M7 · Launch hardening
-Status: in review (`feat/m7-launch`); defaults below wait for the owner, deployment waits for a server and domain
+Status: in review (`feat/m7-launch`); defaults approved by the owner on 2026-10-12, deployment waits for a server
+and domain
 
 - Rate limits on every write endpoint, request size limits, security headers, CSRF protection for cookie auth.
 - Pair deletion after 30 days; a "delete everything" button.
@@ -430,11 +431,12 @@ Notes from M7:
 - The API tests were flaky on `main` too (failures in 3 of 4 runs on a fresh database): files ran in
   parallel and the unscoped `sealDue()` and `remind()` sweeps reached other files' pairs mid-test. API test
   files now run one at a time (about 20 s); 3 of 3 runs green.
-- Defaults built and waiting for the owner (no text or numbers in the docs):
+- Defaults built without text or numbers in the docs, all approved by the owner on 2026-10-12:
   1. Limits: 60 writes a minute per session, 30 new sessions a minute per IP, 8 KB bodies. The 10 charges a
      day of spec §7 stay on top.
   2. "Delete everything" deletes the shared tab at once, so the partner loses its history too (after a leave
      it is already invisible to them). Copy: "Delete everything" / "Your tabs, verdicts and this phone's
      place in Petty Tab are deleted for good. Alex's tab ends too." with "Keep it". No reference screen.
-  3. Backups stay on the server for 14 days with no offsite copy; renders on local disk.
-  4. No hosted error tracker; logs only.
+  3. Backups stay on the server for 14 days, restore-checked every night, with no offsite copy (offsite deferred
+     to after launch); renders on local disk.
+  4. No hosted error tracker for launch; rotated Docker logs only.
