@@ -40,6 +40,7 @@ model Pair {
   endedAt   DateTime? @map("ended_at") @db.Timestamptz
   members   Member[]
   invites   Invite[]
+  charges   Charge[]
 
   @@map("pairs")
 }
@@ -54,6 +55,8 @@ model Member {
   species     String
   joinedAt    DateTime @default(now()) @map("joined_at") @db.Timestamptz
   invites     Invite[]
+  filed       Charge[] @relation("filer")
+  accused     Charge[] @relation("accused")
 
   @@unique([pairId, species])
   @@index([userId])
@@ -76,4 +79,34 @@ model Invite {
 
   @@index([pairId])
   @@map("invites")
+}
+
+/// spec §8. The status set is a Postgres enum, so nothing else can be stored.
+enum ChargeStatus {
+  pending
+  guilty
+  appealed
+  upheld
+  dropped
+}
+
+model Charge {
+  id         String       @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  pairId     String       @map("pair_id") @db.Uuid
+  pair       Pair         @relation(fields: [pairId], references: [id], onDelete: Cascade)
+  /// The start of the week the charge was filed in (spec §10); it stays there whatever happens later.
+  weekStart  DateTime     @map("week_start") @db.Timestamptz
+  filerId    String       @map("filer_id") @db.Uuid
+  filer      Member       @relation("filer", fields: [filerId], references: [id], onDelete: Cascade)
+  accusedId  String       @map("accused_id") @db.Uuid
+  accused    Member       @relation("accused", fields: [accusedId], references: [id], onDelete: Cascade)
+  /// A key of CRIMES in @petty-tab/shared, checked by the request schema.
+  crimeKey   String       @map("crime_key")
+  status     ChargeStatus @default(pending)
+  createdAt  DateTime     @default(now()) @map("created_at") @db.Timestamptz
+  pleadedAt  DateTime?    @map("pleaded_at") @db.Timestamptz
+  resolvedAt DateTime?    @map("resolved_at") @db.Timestamptz
+
+  @@index([pairId, weekStart])
+  @@map("charges")
 }
