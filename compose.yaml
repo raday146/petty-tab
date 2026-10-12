@@ -1,4 +1,4 @@
-# M0 runs Postgres only. api, web and renderer services arrive with M5 (renderer) and M7 (deployment).
+# Postgres only. The api, web and renderer services arrive with deployment (M7).
 services:
   db:
     image: postgres:18

@@ -158,9 +158,10 @@ slide whistle and boing, winner fanfare).
 
 - 1080×1920, 30 fps (180 frames), H.264 High, `yuv420p`, CRF about 18, `+faststart`; AAC 48 kHz stereo
   192 kbps; duration exactly 6.00s.
-- The renderer opens a render-only route (`/render/reel/:verdictId?sig=…`) at a 1080×1920 viewport with
-  device scale 1, calls `window.__reel.seek(t)` for each frame, waits one animation frame, screenshots, and
-  pipes the PNGs to ffmpeg.
+- The renderer opens the render-only route `/render/reel` at a 1080×1920 viewport with device scale 1, hands it
+  the verdict with `window.__render(input)` (the job carries the snapshot, so the route needs no database
+  access and no signature), calls `window.__reel.seek(t)` for each frame, waits one animation frame,
+  screenshots, and pipes the PNGs to ffmpeg. The card uses `/render/card` the same way.
 - Audio is rendered in the same page with an `OfflineAudioContext` (6s, 48 kHz) from the same cue table, so
   cue times are exact, then returned as WAV and muxed.
 - The poster frame for previews is t = 5.95.

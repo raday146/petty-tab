@@ -249,7 +249,7 @@ Notes from M4:
 - Screenshot ratios of the dev screens are unchanged from M1–M3.
 
 ## M5 · Shareables
-Status: in progress (`feat/m5-shareables`)
+Status: in review (`feat/m5-shareables`); the phone share check and the owner's approval of the defaults are open
 
 - `packages/reel`: the timeline from `reel.md` as data plus a React player with `seek(t)`, play, loop,
   hold-to-pause; used by the story preview screen.
@@ -258,11 +258,48 @@ Status: in progress (`feat/m5-shareables`)
 - Share button with the Web Share API (files) and a download fallback; "Send to WhatsApp".
 
 Done when:
-- [ ] The card PNG is exactly 1080×1920 and matches the verdict card layout
-- [ ] Reel frames at every timestamp in `reference/reel-frames/` match within tolerance
-- [ ] `ffprobe` on the MP4: 1080×1920, 30 fps, 6.00s ±1 frame, H.264 yuv420p, AAC 48 kHz
-- [ ] The same verdict rendered twice produces identical frames
+- [x] The card PNG is exactly 1080×1920 and matches the verdict card layout
+      (`apps/web/e2e/export.spec.ts` "the card PNG is exactly 1080×1920" reads the IHDR of the renderer's own
+      output; `render.spec.ts` "verdict card › is exactly 1080×1920 and matches the verdict card of
+      12-verdict-card.png" shrinks the export to the reference's 2× card box: 2.7%, see notes)
+- [x] Reel frames at every timestamp in `reference/reel-frames/` match within tolerance
+      (`render.spec.ts` "reel frames": all 21 at ≤ 2.6%, limit 3%, see notes)
+- [x] `ffprobe` on the MP4: 1080×1920, 30 fps, 6.00s ±1 frame, H.264 yuv420p, AAC 48 kHz
+      (`export.spec.ts` "the reel MP4 matches reel.md §8…": h264 High, yuv420p, 30/1, AAC 48000 Hz stereo)
+- [x] The same verdict rendered twice produces identical frames
+      (`export.spec.ts`: two full renders give the same 180 frame hashes; `render.spec.ts` "the same t twice is
+      the same frame"; reel unit test "particles are seeded")
 - [ ] Sharing works on iOS Safari and Android Chrome (manual check, recorded in this file)
+      (automated: `verdict.spec.ts` hands the real MP4 to a stubbed `navigator.share`, and a tie's card
+      downloads where files cannot be shared; the phone check is still to do)
+
+Notes from M5:
+- Pipeline: sealing (and every sentence change) queues `render` jobs on pg-boss with the snapshot as a
+  `renderInput` (shared zod schema). `apps/renderer` opens `/render/card` or `/render/reel` at 1080×1920, hands
+  the input to `window.__render()`, screenshots the card or seeks the reel frame by frame into ffmpeg with the
+  `OfflineAudioContext` WAV, writes `STORAGE_DIR/verdicts/<id>/<kind>-<sentence>.<ext>` (via a `.part` file and
+  a rename) and reports on the `rendered` queue. The API keeps a render only if its key still matches the
+  current sentence, sets `card_url`/`reel_url` (the storage key) and emits `verdict.updated`. A reel takes
+  about 14 s, a card 0.3 s.
+- The render routes take their input from the renderer instead of loading `/render/reel/:id?sig=…`
+  (`reel.md` §8 updated): they are pure, need no database access and no signed page URL.
+- Files: `GET /verdicts/:id/card|reel` 302s to `/api/files/verdicts/<id>/<name>?exp&sig`, HMAC-SHA256 with
+  `FILES_KEY`, valid 5 minutes, served from `STORAGE_DIR` with Range support (iOS needs it for MP4). S3 with
+  presigned URLs and the Docker renderer service move to M7 with the rest of deployment.
+- Deliberate differences: the reel references were captured from the prototype's rounded story viewer (black
+  corners and a 1px side edge, ignored) and are softer than a crisp 1080 render: every edge differs by about a
+  pixel at the best alignment (0, 0), so the limit is 3% instead of about 2%. The card comparison shrinks
+  1080 → 780 (resampling, 2.7%) and the reference's sparkles are mid-twinkle (0.1%). The story preview matches
+  `14-story-viewer.png` at t = 5.5 within 4%: the reference caught its confetti at another moment.
+- Defaults built and flagged for the owner: "Send to WhatsApp" opens the share sheet with the reel (the user
+  picks WhatsApp); where files cannot be shared it opens `wa.me` with "Alex owes Maya: <sentence>". "Share
+  story" opens the story preview with the share sheet over it. Share buttons read "Printing…" until the file is
+  fetched (the sheet must open inside the tap). The export keeps reel.md's positions (no safe-zone shift, no
+  extra hold).
+- The e2e run starts `apps/renderer` too; the API tests delete the render jobs they queue.
+- Known flake, older than M5 (fails the same way on `main`): `screens.spec.ts` "the GUILTY stamp matches 09"
+  differs by 13.7% when run alone (the plea card's collapse is still running at the frozen frame) and passes in
+  the full run.
 
 ## M6 · PWA and notifications
 Status: not started
