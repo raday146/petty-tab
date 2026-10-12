@@ -1,0 +1,24 @@
+/* M2: Leave the tab, under Continue on the edit picker (no design.md screen yet). */
+.leave {
+  display: block;
+  margin: 10px auto 0;
+  border: 0;
+  background: none;
+  color: var(--mute);
+  font-weight: 600;
+  font-size: 15px;
+  padding: 8px 12px;
+}
+.confirm {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 10px;
+}
+.confirm p {
+  grid-column: 1 / -1;
+  margin: 0;
+  text-align: center;
+  color: var(--mute);
+  font-size: 15px;
+}
