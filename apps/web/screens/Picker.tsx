@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { ORDER, SPECIES, type Species } from '@petty-tab/art';
 import { AnimalCard } from '@/components/AnimalCard';
+import { AnimalSticker } from '@/components/AnimalSticker';
 import { Button } from '@/components/Button';
 import { Screen } from '@/components/Screen';
 import s from './Picker.module.css';
@@ -13,13 +14,34 @@ interface Props {
   onName: (name: string) => void;
   onSpecies: (species: Species) => void;
   onContinue: () => void;
+  /** Joining: who sent the link (spec §4.3). */
+  invitedBy?: { species: Species; name: string };
+  /** Extra controls under Continue (M2: "Leave the tab" when editing). */
+  children?: ReactNode;
 }
 
-export function Picker({ name, species, taken, onName, onSpecies, onContinue }: Props): ReactNode {
+export function Picker({
+  name,
+  species,
+  taken,
+  onName,
+  onSpecies,
+  onContinue,
+  invitedBy,
+  children,
+}: Props): ReactNode {
   const shown = name.trim();
   return (
     <Screen className={s.screen} aria-label="Pick your spirit animal">
       <div className={s.head}>
+        {invitedBy && (
+          <p className={s.invited}>
+            <AnimalSticker species={invitedBy.species} size={30} />
+            <span>
+              <bdi>{invitedBy.name}</bdi> {SPECIES[invitedBy.species].tag.replace('The', 'the')} invited you.
+            </span>
+          </p>
+        )}
         <h1 className={s.title}>Pick your spirit animal</h1>
         <label className={s.field}>
           <span>Your name</span>
@@ -52,6 +74,7 @@ export function Picker({ name, species, taken, onName, onSpecies, onContinue }: 
             Continue as <bdi>{shown}</bdi> {SPECIES[species].tag.replace('The', 'the')}
           </span>
         </Button>
+        {children}
       </div>
     </Screen>
   );

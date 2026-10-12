@@ -57,8 +57,10 @@ pnpm install
 docker compose up -d db           # Postgres only
 pnpm dev                          # web (:3000) + api (:3001) in watch mode; /api/* is proxied by web
 pnpm test                         # Vitest across packages, plus the art package's node:test suite
+                                  # (the API tests need the db up and migrated)
 pnpm --filter @petty-tab/web exec playwright install chromium   # once, before the first e2e run
-pnpm e2e                          # Playwright end-to-end and screenshot tests (starts web on :3100)
+pnpm e2e                          # Playwright end-to-end and screenshot tests (starts web on :3100 and
+                                  # the API on :3001; needs the db up and migrated)
 DIFF_DIR=/tmp/diffs pnpm e2e      # same, and write each screen's screenshot + diff image there
 pnpm lint && pnpm typecheck       # ESLint + Prettier check; tsc in every package
 pnpm format                       # Prettier write
