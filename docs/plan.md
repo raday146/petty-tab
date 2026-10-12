@@ -304,7 +304,7 @@ Notes from M5:
   the full run.
 
 ## M6 · PWA and notifications
-Status: in progress (`feat/m6-pwa-push`)
+Status: in review (`feat/m6-pwa-push`); defaults below wait for the owner
 
 - Web app manifest (name, theme colours, icons from the coffee-cup crown), service worker with an offline
   shell, an install hint (with the iPhone "Add to Home Screen" steps).
@@ -312,9 +312,52 @@ Status: in progress (`feat/m6-pwa-push`)
   reminder.
 
 Done when:
-- [ ] Installable on Android Chrome and iOS Safari; Lighthouse PWA installability checks pass
+- [x] Installable on Android Chrome and iOS Safari; installability checks pass
+      (`apps/web/e2e/pwa.spec.ts` "the manifest makes the app installable": the manifest, PNG icons of 180, 192
+      and 512 px, and Chrome's `Page.getInstallabilityErrors` returns none. Lighthouse dropped its PWA category
+      in v12, so Chrome's own check stands in. iOS: `apple-touch-icon` and `apple-mobile-web-app-capable` are
+      in the page head; installing on a real iPhone is part of the staging check below)
 - [ ] Push arrives on an installed iPhone (iOS 16.4 or later) and on Android for each event in spec §12
-- [ ] Opening the app offline shows the shell and a clear offline message, not an error page
+      (server side verified: `apps/api/src/push.service.test.ts` sends each §12 event to the right member once,
+      batches charges, skips undone ones, forgets gone subscriptions and reminds on Wednesday 19:00 local.
+      Delivery to real phones needs HTTPS, so it waits for the staging deployment, as the M5 share check did)
+- [x] Opening the app offline shows the shell and a clear offline message, not an error page
+      (`pwa.spec.ts` "opened offline, the app shows its shell and says it is offline; back online it carries
+      on", against a production build)
+
+Notes from M6:
+- Push: `push_subs` (unique endpoint; a device that changes user moves over). `POST /push/subscriptions`
+  accepts only endpoints of the browser push services (FCM, Mozilla, Apple, Windows), because the API POSTs
+  to them. `PushService.notify(memberId, text)` queues a `push` job; the worker sends with `web-push` (VAPID
+  from `VAPID_*` in `.env`, logged instead of sent without them) and deletes subscriptions answering 404/410.
+- Batching: the existing `charge-push` job (10 s after filing, cancelled by undo) now sends. Within 2 minutes
+  of the accused's last charge push it re-queues itself for the end of the window; then one push carries every
+  unpushed charge still pending (`charges.pushed_at`, claimed atomically).
+- The reminder sweep runs every 15 minutes (`reminder` queue), so :30 and :45 zones get 19:00 on time; it
+  catches up within a day and records `verdicts.reminded_at`.
+- Service worker (`apps/web/public/sw.js`, no library): network first for pages and assets, the cache only as
+  the offline fallback, so nothing is served stale online. API calls are never cached. The offline shell does
+  not work under `next dev` (its runtime waits for the HMR socket), so `pnpm e2e` also builds and serves the
+  web on :3101 for `pwa.spec.ts`. Other specs block service workers.
+- The app icon is drawn at request time by `next/og` from `packages/art`'s cup crown on ink, as in the
+  prototype's "App icon" (the ink outlines vanish on ink there too).
+- Sound: the recipes were already in `lib/sfx.ts`; M6 adds the setting. "Sound: on/off" and
+  "Notifications: on/off" pills sit on the edit screen (the app's settings) above "Leave the tab". The sound
+  choice is remembered per device and shared with the story preview's mute.
+- Defaults built and waiting for the owner (no text or screen in the docs):
+  1. Batched charge push: "Maya filed 3 charges: Trash Jenga, The Phantom Sip and 1 more."
+  2. Reminder: "You still owe Maya: <sentence>." every Wednesday 19:00 local while the sentence is neither
+     served nor confirmed (once served, the loser is waiting on the winner, so no reminder).
+  3. Auto-guilty after 24 hours of silence sends no push ("pleads guilty" would be untrue).
+  4. The one-time offer after the pair completes: "Know when you're charged" / "A ping when Alex files a
+     charge or pleads, and when the verdict is in." with "Turn on notifications" and "Not now" (or "Install the
+     app" where Chrome offers it). On an iPhone outside the Home Screen: "Add Petty Tab to your Home Screen"
+     with the Share, Add to Home Screen steps. The offline page: "You're offline" / "The tab catches up as soon
+     as you're back." with "Try again". No reference screens; built from the existing sheet and notice.
+  5. Sound stays on under reduced motion (design.md §7 is about motion); the setting silences it.
+- Known e2e flake, older than M6: under a full parallel run on this machine the 2-second live-update waits in
+  `tab.spec.ts` and `pairing.spec.ts` time out now and then (`main` at dbec4ab: 7 failures in one run; this
+  branch: 2 and 4 in two runs, different tests each time). Every spec passes when run on its own.
 
 ## M7 · Launch hardening
 Status: not started
