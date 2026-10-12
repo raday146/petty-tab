@@ -30,7 +30,7 @@ card, name order, the invite flow, swapping animals), the docs win; `design.md` 
 | Push | Web Push with VAPID keys |
 | Renders | `apps/renderer`: headless Chromium (Playwright) + ffmpeg, card PNG and reel MP4 |
 | Tests | Vitest (unit), Playwright (e2e and screenshot comparison) |
-| Local infra | Docker Compose: postgres (api, web, renderer services arrive in M7) |
+| Local infra | Docker Compose: postgres for development; `compose.prod.yaml` runs the whole stack |
 
 Use the current stable major of each tool at setup time and record the versions in `docs/plan.md`.
 
@@ -70,6 +70,8 @@ pnpm format                       # Prettier write
 pnpm db:migrate                   # Prisma migrate dev
 pnpm --filter @petty-tab/art generate   # rebuild static SVGs and the art gallery
 pnpm --filter @petty-tab/art test       # art package tests (node:test, no dependencies)
+docker compose -f compose.prod.yaml up -d --build   # production: db, api, web, renderer, Caddy (HTTPS for
+                                                    # $DOMAIN), nightly backup; runbook in docs/plan.md M7
 ```
 
 ## Architecture rules
