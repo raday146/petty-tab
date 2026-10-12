@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import type { Species } from '@petty-tab/art';
-import { SENTENCE_KEYS, type ChargeStatus, type CrimeKey, type SentenceKey } from './catalog.ts';
+import { CRIME_KEYS, SENTENCE_KEYS, type ChargeStatus, type CrimeKey, type SentenceKey } from './catalog.ts';
+import { nameSchema, speciesSchema } from './identity.ts';
 import { rng } from './rng.ts';
 import { counts, tally } from './score.ts';
 
@@ -47,6 +48,25 @@ export function sentenceLocked(sentenceLockedAt: Date | null, deadline: Date, no
 export const sentenceBody = z.object({
   sentenceKey: z.enum(SENTENCE_KEYS as [SentenceKey, ...SentenceKey[]]),
 });
+
+const renderMember = z.object({ name: nameSchema, species: speciesSchema });
+
+/** What a card or reel render is drawn from: the render job's payload and the render routes' input (spec §11). */
+export const renderInput = z.object({
+  winner: renderMember,
+  loser: renderMember,
+  tie: z.boolean(),
+  topCrimes: z
+    .array(
+      z.object({
+        crime: z.enum(CRIME_KEYS as [CrimeKey, ...CrimeKey[]]),
+        count: z.number().int().positive(),
+      }),
+    )
+    .max(3),
+  sentence: z.enum(SENTENCE_KEYS as [SentenceKey, ...SentenceKey[]]).nullable(),
+});
+export type RenderInput = z.output<typeof renderInput>;
 
 /** `GET /api/verdicts/:id`: names winner first; on a tie, join order (spec §10). */
 export interface VerdictView {

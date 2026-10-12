@@ -11,6 +11,14 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@petty-tab/art": "workspace:*",
     "@petty-tab/shared": "workspace:*"
+  },
+  "peerDependencies": {
+    "react": "19.3.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.3.0",
+    "react": "19.3.0"
   }
 }

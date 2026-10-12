@@ -15,5 +15,8 @@ export default tseslint.config(
     ],
   },
   ...tseslint.configs.recommended,
-  { files: ['apps/web/**/*.tsx'], ...reactHooks.configs.flat['recommended-latest'] },
+  {
+    files: ['apps/web/**/*.tsx', 'packages/reel/**/*.tsx'],
+    ...reactHooks.configs.flat['recommended-latest'],
+  },
 );
