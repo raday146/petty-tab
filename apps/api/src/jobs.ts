@@ -10,6 +10,8 @@ export const QUEUES = {
   // spec §12: one push to a member's devices, and the Wednesday sentence reminder sweep.
   push: 'push',
   reminder: 'reminder',
+  // spec §4.7: deletes pairs 30 days after they ended.
+  purge: 'purge',
   // spec §11: the API queues renders for apps/renderer, which reports back on `rendered`.
   ...RENDER_QUEUES,
 } as const;

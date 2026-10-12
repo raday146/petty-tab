@@ -32,3 +32,8 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm --filter @petty-tab/api exec prisma migrate deploy
       - run: pnpm test
+      # ops/backup.sh against the database the tests just filled: dump, restore into a scratch db, compare.
+      - run: |
+          docker run --rm --network host -e PGHOST=localhost -e PGUSER=petty -e PGPASSWORD=petty \
+            -e PGDATABASE=petty_tab -e BACKUP_DIR=/tmp/backups -v "$PWD/ops/backup.sh:/backup.sh:ro" \
+            postgres:18 sh /backup.sh

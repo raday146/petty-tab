@@ -10,7 +10,7 @@ const DAY = 24 * 60 * 60 * 1000;
 
 export type SessionRequest = IncomingMessage & { userId?: string };
 
-function readCookie(header: string | undefined, name: string): string | undefined {
+export function readCookie(header: string | undefined, name: string): string | undefined {
   const pair = header?.split(';').find((c) => c.trim().startsWith(`${name}=`));
   return pair?.split('=')[1]?.trim();
 }
@@ -62,6 +62,11 @@ function setCookie(res: ServerResponse, token: string, expires: Date): void {
     'Set-Cookie',
     `${COOKIE}=${token}; Path=/; Expires=${expires.toUTCString()}; HttpOnly; Secure; SameSite=Lax`,
   );
+}
+
+/** Ends the session in the browser (after "delete everything"). */
+export function clearCookie(res: ServerResponse): void {
+  setCookie(res, '', new Date(0));
 }
 
 /** The session's user id, set by SessionMiddleware. */
