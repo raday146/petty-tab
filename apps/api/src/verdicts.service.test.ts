@@ -1,9 +1,10 @@
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import type { CrimeKey } from '@petty-tab/shared';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import { renderKey, type CrimeKey, type RenderJob } from '@petty-tab/shared';
 import { ChargesService } from './charges.service.js';
 import type { Clock } from './clock.js';
 import { Events } from './events.js';
-import { Jobs } from './jobs.js';
+import { Jobs, QUEUES } from './jobs.js';
+import { verifyFile } from './crypto.js';
 import { PairingService } from './pairing.service.js';
 import { PrismaService } from './prisma.service.js';
 import { VerdictsService } from './verdicts.service.js';
@@ -225,5 +226,78 @@ describe('the sentence (spec §10)', () => {
     const other = await pair('Asia/Jerusalem', at('2026-10-12T10:00:00Z'));
     expect(await code(verdicts.view(other.a, id))).toBe('not_allowed');
     expect(await code(verdicts.view(other.a, 'not-a-uuid'))).toBe('not_allowed');
+  });
+});
+
+describe('renders (spec §11)', () => {
+  async function sealed(tie = false) {
+    const p = await pair('Asia/Jerusalem', at('2026-10-12T10:00:00Z'));
+    await file(p.a, 'burrito');
+    if (tie) await file(p.b, 'sip');
+    now = at('2026-10-18T17:00:00Z');
+    await verdicts.sealDue();
+    const { id, sentence } = await verdicts.view(p.a, 'latest');
+    return { ...p, id, sentence };
+  }
+  const queued = async (key: string) =>
+    (await jobs.boss.findJobs<RenderJob>(QUEUES.render, { key })).map((j) => j.data);
+
+  it('queues a card and a reel when a week seals, drawn from the snapshot', async () => {
+    const { id, sentence } = await sealed();
+    const card = renderKey(id, 'card', sentence);
+    expect(await queued(card)).toEqual([
+      {
+        verdictId: id,
+        kind: 'card',
+        key: card,
+        input: {
+          winner: { name: 'Maya', species: 'cat' },
+          loser: { name: 'Alex', species: 'bear' },
+          tie: false,
+          topCrimes: [{ crime: 'burrito', count: 1 }],
+          sentence,
+        },
+      },
+    ]);
+    expect(await queued(renderKey(id, 'reel', sentence))).toHaveLength(1);
+  });
+
+  it('queues only a card on a tie (no reel)', async () => {
+    const { id } = await sealed(true);
+    expect(await queued(renderKey(id, 'card', null))).toHaveLength(1);
+    expect(await queued(renderKey(id, 'reel', null))).toHaveLength(0);
+  });
+
+  it('serves a render once it lands, through a short-lived signed URL; 404 before and to other pairs', async () => {
+    const { a, b, id, sentence } = await sealed();
+    expect(await code(verdicts.file(a, id, 'card'))).toBe('not_rendered');
+    const emit = vi.spyOn(events, 'emit');
+    await verdicts.rendered({ verdictId: id, kind: 'card', key: renderKey(id, 'card', sentence) });
+    expect(emit).toHaveBeenCalledWith(expect.any(String), 'verdict.updated');
+    expect(await verdicts.view(b, id)).toMatchObject({ card: true, reel: false });
+
+    const url = new URL(await verdicts.file(b, id, 'card'), 'http://x');
+    const key = url.pathname.replace('/api/files/', '');
+    const [exp, sig] = [Number(url.searchParams.get('exp')), url.searchParams.get('sig')!];
+    expect(key).toBe(renderKey(id, 'card', sentence));
+    expect(verifyFile(key, exp, sig, now)).toBe(true);
+    expect(verifyFile(key, exp, sig, plus(now, 301))).toBe(false);
+    expect(verifyFile(renderKey(id, 'reel', sentence), exp, sig, now)).toBe(false);
+    expect(verifyFile(key, exp + 1, sig, now)).toBe(false);
+
+    const other = await pair('Asia/Jerusalem', at('2026-10-12T10:00:00Z'));
+    expect(await code(verdicts.file(other.a, id, 'card'))).toBe('not_allowed');
+  });
+
+  it('re-renders on a new sentence and ignores a render of the old one', async () => {
+    const { a, id, sentence } = await sealed();
+    await verdicts.rendered({ verdictId: id, kind: 'reel', key: renderKey(id, 'reel', sentence) });
+    const next = sentence === 'breakfast' ? 'netflix' : 'breakfast';
+    await verdicts.setSentence(a, id, { sentenceKey: next });
+    expect(await verdicts.view(a, id)).toMatchObject({ reel: false });
+    expect(await queued(renderKey(id, 'reel', next))).toHaveLength(1);
+
+    await verdicts.rendered({ verdictId: id, kind: 'card', key: renderKey(id, 'card', sentence) });
+    expect(await verdicts.view(a, id)).toMatchObject({ card: false });
   });
 });
