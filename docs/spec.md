@@ -134,7 +134,8 @@ so both members have a way to earn foot rubs. Custom crimes are out of scope for
   charge, sends `charge.deleted` over SSE so it disappears from the accused's screen, and cancels the held
   push. Undo is refused once the accused has pleaded (the toast's Undo disappears when `plea.*` arrives).
 - Limit: 10 charges per filer per rolling 24 hours, counting charges that still exist (undone charges do not
-  count). The 11th is refused with a friendly message.
+  count). The 11th is refused with a friendly message: "The court needs a break" / "Ten charges in a day is
+  plenty. Try again tomorrow." (approved by the owner on 2026-10-12).
 
 ### States
 
@@ -306,8 +307,11 @@ POST   /verdicts/:id/served              (loser)
 POST   /verdicts/:id/confirm             (winner)
 GET    /verdicts/:id/card                302 to a signed PNG URL (404 until rendered)
 GET    /verdicts/:id/reel                302 to a signed MP4 URL (404 until rendered)
-GET    /events                           SSE stream for the pair: charge.created, charge.deleted, plea.*,
-                                         appeal.*, member.*, verdict.*
+GET    /events                           SSE stream for the pair: charge.created, charge.deleted, plea.guilty,
+                                         plea.appeal, appeal.upheld, appeal.dropped, member.joined,
+                                         member.updated, member.left, verdict.* (M4). Each message is
+                                         { type, chargeId? }; clients refetch /tab. 24 hours of silence
+                                         sends plea.guilty too.
 POST   /push/subscriptions               { endpoint, keys }
 DELETE /push/subscriptions               { endpoint }
 ```

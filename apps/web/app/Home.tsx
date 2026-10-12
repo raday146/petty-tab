@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { ORDER, type Species } from '@petty-tab/art';
-import type { Me } from '@petty-tab/shared';
+import type { CrimeKey, Me, TabView } from '@petty-tab/shared';
 import { Button } from '@/components/Button';
 import { api } from '@/lib/api';
 import { Intro } from '@/screens/Intro';
@@ -63,14 +63,34 @@ function Pair({
   const [link, setLink] = useState<string>();
   const [sheet, setSheet] = useState(sheetOpen);
   const [editing, setEditing] = useState(false);
+  const [tab, setTab] = useState<TabView>();
+  const loadTab = useCallback(() => api<TabView>('/tab').then(setTab, noop), []);
 
   useEffect(() => {
-    if (partner) return;
-    api<{ link: string }>('/pairs/invite').then(({ link }) => setLink(fullLink(link)), noop);
-    // ponytail: polls until the partner joins; SSE member.joined replaces this in M3.
-    const poll = setInterval(refresh, 1000);
-    return () => clearInterval(poll);
-  }, [partner, refresh]);
+    if (partner) void loadTab();
+    else api<{ link: string }>('/pairs/invite').then(({ link }) => setLink(fullLink(link)), noop);
+  }, [partner, loadTab]);
+
+  // spec §14: any message (and every reconnect, which may have missed some) refetches the pair and the tab.
+  useEffect(() => {
+    const events = new EventSource('/api/events');
+    const sync = (): void => {
+      void refresh();
+      void loadTab();
+    };
+    events.onmessage = sync;
+    events.onopen = sync;
+    return () => events.close();
+  }, [refresh, loadTab]);
+
+  /** The viewer's own writes refetch too, so the tab stays right even if the stream drops. */
+  const write = (path: string, init?: { method?: string; body?: unknown }): void =>
+    void api(path, init).then(loadTab, loadTab);
+  const file = async (crimeKey: CrimeKey): Promise<string> => {
+    const { id } = await api<{ id: string }>('/charges', { body: { crimeKey } });
+    void loadTab();
+    return id;
+  };
 
   if (editing) return <Edit me={me} onDone={() => refresh().then(() => setEditing(false))} />;
   return (
@@ -80,13 +100,14 @@ function Pair({
         them={partner ?? member}
         inviteLink={partner ? undefined : (link ?? '')}
         firstVerdictDay="Sunday"
-        lead={0}
-        meOwed={[]}
-        themOwed={[]}
-        charges={[]}
-        onUndo={noop}
-        onPlea={noop}
-        onDecide={noop}
+        lead={tab?.lead ?? 0}
+        meOwed={tab?.meOwed ?? []}
+        themOwed={tab?.themOwed ?? []}
+        charges={tab?.charges ?? []}
+        onFile={partner ? file : undefined}
+        onUndo={(id) => write(`/charges/${id}`, { method: 'DELETE' })}
+        onPlea={(id, plea) => write(`/charges/${id}/plea`, { body: { plea } })}
+        onDecide={(id, decision) => write(`/charges/${id}/appeal`, { body: { decision } })}
         onVerdict={noop}
         onNewLink={() =>
           api<{ link: string }>('/pairs/invite', { method: 'POST' }).then(

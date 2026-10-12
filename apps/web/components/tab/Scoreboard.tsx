@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { SPECIES, type Species } from '@petty-tab/art';
-import { ropePosition, type UnitKey } from '@petty-tab/shared';
+import { ropePosition, type Owed, type UnitKey } from '@petty-tab/shared';
 import { cx } from '@/lib/cx';
 import { AnimalSticker } from '../AnimalSticker';
 import { Pill } from '../Pill';
@@ -10,7 +10,7 @@ export interface Member {
   name: string;
   species: Species;
 }
-export type Owed = { unit: UnitKey; count: number }[];
+export type { Owed } from '@petty-tab/shared';
 
 interface Props {
   me: Member;

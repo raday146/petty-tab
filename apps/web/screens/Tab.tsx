@@ -1,7 +1,14 @@
 'use client';
 
-import { useCallback, useRef, useState, type ReactNode } from 'react';
-import { CRIMES, CRIME_KEYS, type CrimeKey, type UnitKey } from '@petty-tab/shared';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import {
+  CRIMES,
+  CRIME_KEYS,
+  type ChargeStatus,
+  type CrimeKey,
+  type TabCharge,
+  type UnitKey,
+} from '@petty-tab/shared';
 import { Art } from '@/components/Art';
 import { AnimalSticker } from '@/components/AnimalSticker';
 import { Button } from '@/components/Button';
@@ -10,16 +17,15 @@ import { nudge, Screen } from '@/components/Screen';
 import { Sheet } from '@/components/Sheet';
 import { Toast, useToast } from '@/components/Toast';
 import { CourtCard } from '@/components/tab/CourtCard';
-import { CrimeRow, type Charge } from '@/components/tab/CrimeRow';
+import { CrimeRow } from '@/components/tab/CrimeRow';
 import { CrimeTile } from '@/components/tab/CrimeTile';
 import { Scoreboard, type Member, type Owed } from '@/components/tab/Scoreboard';
+import { ApiFailure } from '@/lib/api';
 import { sfx } from '@/lib/sfx';
 import { InviteLink } from './InviteSheet';
 import s from './Tab.module.css';
 
-export interface TabCharge extends Charge {
-  filer: 'me' | 'them';
-}
+export type { TabCharge };
 
 interface Props {
   me: Member;
@@ -33,8 +39,8 @@ interface Props {
   themOwed: Owed;
   /** This week's charges, newest first. */
   charges: TabCharge[];
-  /** Files a charge against the partner; returns its id for Undo. Without it there is no FAB (M2: filing lands in M3). */
-  onFile?: (crime: CrimeKey) => string;
+  /** Files a charge against the partner; resolves to its id for Undo. Without it there is no FAB (waiting). */
+  onFile?: (crime: CrimeKey) => string | Promise<string>;
   onUndo: (id: string, crime: CrimeKey) => void;
   onPlea: (id: string, plea: 'guilty' | 'appeal') => void;
   onDecide: (id: string, decision: 'uphold' | 'drop') => void;
@@ -52,7 +58,9 @@ export function Tab(props: Props): ReactNode {
   const [fresh, setFresh] = useState<string>();
   const [slam, setSlam] = useState<string>();
   const [bump, setBump] = useState<{ unit: UnitKey; n: number }>();
+  const [undoable, setUndoable] = useState<string>();
   const screen = useRef<HTMLElement>(null);
+  const seen = useRef<Map<string, ChargeStatus>>(null);
   const { toast, show, hide } = useToast();
 
   const stamp = useCallback((id: string) => {
@@ -64,13 +72,52 @@ export function Tab(props: Props): ReactNode {
     setTimeout(() => setSlam((cur) => (cur === id ? undefined : cur)), SLAM_MS);
   }, []);
 
-  const file = (crime: CrimeKey): void => {
+  const bumpPill = (crime: CrimeKey): void =>
+    setBump((b) => ({ unit: CRIMES[crime].unit, n: (b?.n ?? 0) + 1 }));
+
+  // The partner's answers arrive as new statuses: the filer sees a guilty plea stamp and the pill bump,
+  // the accused sees an upheld appeal stamp. The viewer's own pleas and decisions stamp where they happen.
+  useEffect(() => {
+    const before = seen.current;
+    seen.current = new Map(charges.map((c) => [c.id, c.status]));
+    if (!before) return;
+    for (const c of charges) {
+      const was = before.get(c.id);
+      if (c.filer === 'me' && was === 'pending' && c.status === 'guilty') {
+        stamp(c.id);
+        bumpPill(c.crime);
+      }
+      if (c.filer === 'them' && was === 'appealed' && c.status === 'upheld') stamp(c.id);
+    }
+  }, [charges, stamp]);
+
+  // design.md §5: the filing toast disappears early once the accused pleads.
+  useEffect(() => {
+    const c = charges.find((x) => x.id === undoable);
+    if (c && c.status !== 'pending') hide();
+  }, [charges, undoable, hide]);
+
+  const file = async (crime: CrimeKey): Promise<void> => {
     setLogOpen(false);
     sfx.paper();
     setTimeout(sfx.pop, 180);
-    const id = props.onFile!(crime);
+    let id: string;
+    try {
+      id = await props.onFile!(crime);
+    } catch (e) {
+      // spec §8: the 11th charge in 24 hours.
+      if (e instanceof ApiFailure && e.code === 'rate_limited') {
+        setUndoable(undefined);
+        show({
+          title: 'The court needs a break',
+          message: 'Ten charges in a day is plenty. Try again tomorrow.',
+        });
+      }
+      return;
+    }
     setFresh(id);
-    setBump((b) => ({ unit: CRIMES[crime].unit, n: (b?.n ?? 0) + 1 }));
+    bumpPill(crime);
+    setUndoable(id);
     show({
       title: CRIMES[crime].title,
       message: CRIMES[crime].description,
@@ -79,6 +126,7 @@ export function Tab(props: Props): ReactNode {
   };
 
   const plead = (id: string, plea: 'guilty' | 'appeal'): void => {
+    setUndoable(undefined);
     props.onPlea(id, plea);
     stamp(id);
     show(
@@ -97,7 +145,11 @@ export function Tab(props: Props): ReactNode {
 
   const decide = (id: string, decision: 'uphold' | 'drop'): void => {
     props.onDecide(id, decision);
-    if (decision === 'uphold') stamp(id);
+    if (decision !== 'uphold') return;
+    stamp(id);
+    // The upheld charge counts again.
+    const c = charges.find((x) => x.id === id);
+    if (c) bumpPill(c.crime);
   };
 
   const accused = (c: TabCharge): Member => (c.filer === 'me' ? them : me);
@@ -207,7 +259,7 @@ export function Tab(props: Props): ReactNode {
           >
             <div className={s.picks}>
               {CRIME_KEYS.map((k) => (
-                <CrimeTile key={k} crime={k} onPick={file} />
+                <CrimeTile key={k} crime={k} onPick={(crime) => void file(crime)} />
               ))}
             </div>
           </Sheet>
