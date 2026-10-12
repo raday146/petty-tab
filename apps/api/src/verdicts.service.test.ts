@@ -134,7 +134,11 @@ describe('the sealed week (spec §10)', () => {
     now = weekEnd;
     await verdicts.sealDue();
 
-    const rows = await prisma.charge.findMany({ where: { pairId }, orderBy: { createdAt: 'asc' } });
+    // Both charges share the injected clock's createdAt; the UUIDv7 id keeps filing order.
+    const rows = await prisma.charge.findMany({
+      where: { pairId },
+      orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+    });
     expect(rows.map((c) => [c.id, c.status])).toEqual([
       [pending, 'guilty'],
       [appealed, 'dropped'],

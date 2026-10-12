@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, Param, Patch, Post } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Param, Patch, Post, Redirect } from '@nestjs/common';
 import { sentenceBody, type VerdictView } from '@petty-tab/shared';
 import { parse } from './errors.js';
 import { UserId } from './session.middleware.js';
@@ -12,6 +12,19 @@ export class VerdictsController {
   @Get()
   view(@UserId() userId: string, @Param('id') id: string): Promise<VerdictView> {
     return this.verdicts.view(userId, id);
+  }
+
+  /** spec §14: 302 to a signed PNG / MP4 URL, 404 until rendered. */
+  @Get('card')
+  @Redirect()
+  async card(@UserId() userId: string, @Param('id') id: string): Promise<{ url: string }> {
+    return { url: await this.verdicts.file(userId, id, 'card') };
+  }
+
+  @Get('reel')
+  @Redirect()
+  async reel(@UserId() userId: string, @Param('id') id: string): Promise<{ url: string }> {
+    return { url: await this.verdicts.file(userId, id, 'reel') };
   }
 
   @Patch('sentence')

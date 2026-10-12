@@ -68,6 +68,21 @@ export const renderInput = z.object({
 });
 export type RenderInput = z.output<typeof renderInput>;
 
+export type RenderKind = 'card' | 'reel';
+
+/** Where a render lands in storage. The sentence is in the key, so a new sentence never serves a stale file. */
+export const renderKey = (verdictId: string, kind: RenderKind, sentence: SentenceKey | null): string =>
+  `verdicts/${verdictId}/${kind}-${sentence ?? 'tie'}.${kind === 'card' ? 'png' : 'mp4'}`;
+
+/** The `render` job (api → renderer) and the `rendered` job (renderer → api) of spec §11. */
+export interface RenderJob {
+  verdictId: string;
+  kind: RenderKind;
+  key: string;
+  input: RenderInput;
+}
+export type RenderedJob = Omit<RenderJob, 'input'>;
+
 /** `GET /api/verdicts/:id`: names winner first; on a tie, join order (spec §10). */
 export interface VerdictView {
   id: string;
@@ -80,6 +95,9 @@ export interface VerdictView {
   locked: boolean;
   served: boolean;
   confirmed: boolean;
+  /** The card PNG / reel MP4 of the current sentence is ready at `/api/verdicts/:id/card|reel`. */
+  card: boolean;
+  reel: boolean;
 }
 
 /** What the verdict stores so later renames never change it (spec §10 step 6). */

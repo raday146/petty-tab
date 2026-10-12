@@ -2,10 +2,14 @@ import { Injectable, type OnModuleInit } from '@nestjs/common';
 import {
   endedWeeks,
   judge,
+  renderKey,
   seedSentence,
   sentenceDeadline,
   sentenceLocked,
   type CrimeKey,
+  type RenderedJob,
+  type RenderJob,
+  type RenderKind,
   type SentenceKey,
   type Species,
   type sentenceBody,
@@ -14,6 +18,7 @@ import {
 } from '@petty-tab/shared';
 import { z } from 'zod';
 import { Clock } from './clock.js';
+import { signedFileUrl } from './crypto.js';
 import { ApiError } from './errors.js';
 import { Events } from './events.js';
 import { Jobs, QUEUES } from './jobs.js';
@@ -37,6 +42,7 @@ export class VerdictsService implements OnModuleInit {
     await this.jobs.start();
     await this.jobs.boss.work(QUEUES.seal, () => this.sealDue());
     await this.jobs.boss.schedule(QUEUES.seal, '*/5 * * * *');
+    await this.jobs.boss.work<RenderedJob>(QUEUES.rendered, ([job]) => this.rendered(job!.data));
   }
 
   /**
@@ -109,8 +115,45 @@ export class VerdictsService implements OnModuleInit {
       }
       return row?.id;
     });
-    if (id) this.events.emit(pairId, 'verdict.sealed');
-    return id !== undefined;
+    if (!id) return false;
+    this.events.emit(pairId, 'verdict.sealed');
+    await this.queueRenders(id);
+    return true;
+  }
+
+  /** spec §11: a card for every verdict, a reel unless it is a tie, drawn from the snapshot. */
+  private async queueRenders(verdictId: string): Promise<void> {
+    const v = await this.prisma.verdict.findUniqueOrThrow({ where: { id: verdictId } });
+    const snap = v.snapshot as unknown as VerdictSnapshot;
+    const sentence = v.sentenceKey as SentenceKey | null;
+    const input = {
+      winner: { name: snap.winner.name, species: snap.winner.species },
+      loser: { name: snap.loser.name, species: snap.loser.species },
+      tie: v.isTie,
+      topCrimes: snap.topCrimes,
+      sentence,
+    };
+    for (const kind of v.isTie ? (['card'] as const) : (['card', 'reel'] as const)) {
+      const key = renderKey(v.id, kind, sentence);
+      const job: RenderJob = { verdictId: v.id, kind, key, input };
+      await this.jobs.boss.send(QUEUES.render, job, { singletonKey: key });
+    }
+  }
+
+  /** A render landed: keep it only if it still draws the current sentence, and tell the pair. */
+  async rendered({ verdictId, kind, key }: RenderedJob): Promise<void> {
+    const v = await this.prisma.verdict.findUnique({ where: { id: verdictId } });
+    if (!v || key !== renderKey(v.id, kind, v.sentenceKey as SentenceKey | null)) return;
+    await this.prisma.verdict.update({ where: { id: v.id }, data: { [`${kind}Url`]: key } });
+    this.events.emit(v.pairId, 'verdict.updated');
+  }
+
+  /** `GET /verdicts/:id/card|reel`: a short-lived signed URL, or 404 until the render lands. */
+  async file(userId: string, id: string, kind: RenderKind): Promise<string> {
+    const { verdict, now } = await this.find(userId, id);
+    const key = kind === 'card' ? verdict.cardUrl : verdict.reelUrl;
+    if (!key) throw new ApiError(404, 'not_rendered', 'Still printing.');
+    return signedFileUrl(key, now);
   }
 
   /** The verdict (`latest` or an id) in the caller's pair, and the caller's role in it. */
@@ -151,6 +194,8 @@ export class VerdictsService implements OnModuleInit {
       locked,
       served: v.servedAt !== null,
       confirmed: v.confirmedAt !== null,
+      card: v.cardUrl !== null,
+      reel: v.reelUrl !== null,
     };
   }
 
@@ -162,10 +207,11 @@ export class VerdictsService implements OnModuleInit {
       ? { count: 0 }
       : await this.prisma.verdict.updateMany({
           where: { id: verdict.id, sentenceLockedAt: null },
-          data: { sentenceKey: body.sentenceKey },
+          data: { sentenceKey: body.sentenceKey, cardUrl: null, reelUrl: null },
         });
     if (count !== 1) throw new ApiError(409, 'sentence_locked', 'The sentence is final.');
     this.events.emit(verdict.pairId, 'verdict.updated');
+    await this.queueRenders(verdict.id);
   }
 
   /** spec §10: the winner's first share locks the sentence; the loser's share changes nothing. */
