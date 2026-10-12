@@ -70,9 +70,22 @@ export type RenderInput = z.output<typeof renderInput>;
 
 export type RenderKind = 'card' | 'reel';
 
+/** What the render routes of apps/web expose to apps/renderer. */
+declare global {
+  interface Window {
+    /** Validates the input (renderInput) and resolves once it is drawn with its fonts loaded. */
+    __render?: (input: unknown) => Promise<void>;
+    /** Reel only: one frame at t (resolves after it is painted), and the soundtrack as base64 WAV. */
+    __reel?: { seek: (t: number) => Promise<void>; wav: () => Promise<string> };
+  }
+}
+
 /** Where a render lands in storage. The sentence is in the key, so a new sentence never serves a stale file. */
 export const renderKey = (verdictId: string, kind: RenderKind, sentence: SentenceKey | null): string =>
   `verdicts/${verdictId}/${kind}-${sentence ?? 'tie'}.${kind === 'card' ? 'png' : 'mp4'}`;
+
+/** pg-boss queue names shared by apps/api and apps/renderer. */
+export const RENDER_QUEUES = { render: 'render', rendered: 'rendered' } as const;
 
 /** The `render` job (api → renderer) and the `rendered` job (renderer → api) of spec §11. */
 export interface RenderJob {

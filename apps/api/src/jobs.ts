@@ -1,5 +1,6 @@
 import { Injectable, Logger, type OnModuleDestroy } from '@nestjs/common';
 import { PgBoss } from 'pg-boss';
+import { RENDER_QUEUES } from '@petty-tab/shared';
 
 /** The queues; pg-boss keeps them in its own `pgboss` schema on the same Postgres. */
 export const QUEUES = {
@@ -7,8 +8,7 @@ export const QUEUES = {
   autoGuilty: 'auto-guilty',
   seal: 'seal',
   // spec §11: the API queues renders for apps/renderer, which reports back on `rendered`.
-  render: 'render',
-  rendered: 'rendered',
+  ...RENDER_QUEUES,
 } as const;
 
 /** The one pg-boss instance. Services send jobs through `boss` and register their workers on it. */

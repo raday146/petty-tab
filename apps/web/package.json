@@ -11,6 +11,7 @@
     "e2e": "playwright test"
   },
   "devDependencies": {
+    "@petty-tab/renderer": "workspace:*",
     "@playwright/test": "1.64.0",
     "@tailwindcss/postcss": "4.3.3",
     "@types/react": "^19.3.0",
