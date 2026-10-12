@@ -11,6 +11,8 @@ export default defineConfig({
     ...devices['Desktop Chrome'],
     // art.css stops its idle loops under reduced motion, so drawings are still and comparable.
     contextOptions: { reducedMotion: 'reduce' },
+    // page.route() does not see requests a service worker makes; pwa.spec.ts allows it where it is tested.
+    serviceWorkers: 'block',
   },
   webServer: [
     {

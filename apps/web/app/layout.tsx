@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import type { ReactNode } from 'react';
 import { Rubik } from 'next/font/google';
 import '@petty-tab/art/art.css';
@@ -14,7 +14,13 @@ const rubik = Rubik({
 export const metadata: Metadata = {
   title: 'Petty Tab',
   description: 'Keep score of the little things. Settle up on Sunday.',
+  // iPhone: Home Screen icon and standalone launch (spec §12: push only works from the Home Screen there).
+  icons: { apple: '/icons/180' },
+  appleWebApp: { capable: true, title: 'Petty Tab', statusBarStyle: 'default' },
 };
+
+// --linen; the browser chrome around the app.
+export const viewport: Viewport = { themeColor: '#f3ead9' };
 
 export default function RootLayout({ children }: { children: ReactNode }): ReactNode {
   return (
