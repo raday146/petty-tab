@@ -107,19 +107,48 @@ Notes from M1:
 - `DIFF_DIR=<dir> pnpm e2e` writes each screen's screenshot and diff image there and prints the ratios.
 
 ## M2 · Identity and pairing
-Status: not started
+Status: done (`feat/m2-identity-pairing`)
 
 - Anonymous session cookie (spec §3); Prisma models `users`, `sessions`, `pairs`, `members`, `invites`.
 - Start a tab, invite link, join page, taken animal rule, waiting state, rename and change animal, leave pair
   (spec §4).
 
 Done when:
-- [ ] Unit tests for name validation, invite token lifecycle (expiry, single use, revoke, re-display while
+- [x] Unit tests for name validation, invite token lifecycle (expiry, single use, revoke, re-display while
       waiting) and the unique-animal rule
-- [ ] Opening an invite while already in a pair shows the "You already have a tab" page and does not consume it
-- [ ] E2E with two browser contexts: A starts a tab, B opens the link, picks a different animal, both see the
+      (`packages/shared/src/identity.test.ts` "nameSchema", "inviteStatus"; `apps/api/src/pairing.service.test.ts`
+      "invite link lifecycle" › re-displays the same link while waiting, replaces an expired link the next time
+      the waiting card loads, New link revokes the previous one, is single use; "join" › refuses the inviter's
+      animal and keeps the link usable; "rename, change animal, leave" › refuses the partner's animal)
+- [x] Opening an invite while already in a pair shows the "You already have a tab" page and does not consume it
+      (`pairing.service.test.ts` "refuses someone already in a pair and does not consume the link";
+      `apps/web/e2e/pairing.spec.ts` "an invite opened while already in a pair is not consumed")
+- [x] E2E with two browser contexts: A starts a tab, B opens the link, picks a different animal, both see the
       completed pair within 2 seconds
-- [ ] Expired, used and unknown links show the friendly page
+      (`pairing.spec.ts` "A starts a tab, B joins with another animal, both see the pair", 2 s timeouts)
+- [x] Expired, used and unknown links show the friendly page
+      (`pairing.spec.ts` "used and unknown links show the friendly page"; expired is the same API answer,
+      `invite_invalid`, covered with the injected clock in "replaces an expired link…", because e2e cannot move
+      the API clock)
+
+Notes from M2:
+- The API uses `@petty-tab/shared` without a build step: `rewriteRelativeImportExtensions` in the API tsconfig,
+  Node 24 strips shared's types at runtime, and `erasableSyntaxOnly` in shared keeps it strippable.
+- IDs come from Postgres 18's `uuidv7()`. Sessions and invite tokens are 128-bit, stored as sha256; invite
+  tokens are also stored AES-256-GCM encrypted with `INVITE_KEY` for re-display.
+- The API tests use the real database (`docker compose up -d db`, migrated); CI runs a Postgres service.
+- `pnpm e2e` also starts the API (`build` + `start` on :3001, or reuses a running one).
+- The waiting tab polls `/api/me` every second; SSE `member.joined` replaces it in M3.
+- The complete tab has no FAB until filing lands in M3. An empty owed list reads "nothing" (spec §9).
+
+Differences from the design (no design.md screen for these yet; awaiting approval):
+1. The name chip sits at the top end of the tab and opens the picker to rename or change animal. "Leave the
+   tab" is a text button under Continue on that picker, with an in-place "This ends the tab for both of you."
+   confirm (Stay / Leave the tab).
+2. The join picker shows "<name> the <animal> invited you." with the inviter's sticker above the title.
+3. The friendly pages reuse the intro layout (title, hero scene, one button): "This link has expired or was
+   already used." with **Start a tab**, and "You already have a tab with <name>." with **Open your tab**.
+   When the visitor's own pair is still waiting there is no partner name, so it reads "You already have a tab."
 
 ## M3 · The tab
 Status: not started
