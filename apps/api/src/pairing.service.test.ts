@@ -140,3 +140,44 @@ describe('join (spec §4.3–4.4)', () => {
     expect(invite.usedAt).toBeNull();
   });
 });
+
+describe('rename, change animal, leave (spec §4.6–4.7)', () => {
+  async function pairUp() {
+    const { a, token } = await startTab();
+    const b = await newUser();
+    await service.acceptInvite(b, token, { name: 'Alex', species: 'bear' });
+    return { a, b };
+  }
+
+  it('renames and changes animal, the partner sees it', async () => {
+    const { a, b } = await pairUp();
+    expect((await service.updateMember(b, { name: 'Lex', species: 'pup' })).member).toEqual({
+      name: 'Lex',
+      species: 'pup',
+    });
+    expect((await service.me(a)).pair?.partner).toEqual({ name: 'Lex', species: 'pup' });
+  });
+
+  it("refuses the partner's animal", async () => {
+    const { b } = await pairUp();
+    expect(await code(service.updateMember(b, { species: 'cat' }))).toBe('species_taken');
+  });
+
+  it('leaving ends the pair for both, and both can start again', async () => {
+    const { a, b } = await pairUp();
+    await service.leave(a);
+    expect(await service.me(a)).toEqual({ member: null, pair: null });
+    expect(await service.me(b)).toEqual({ member: null, pair: null });
+    expect(await code(service.createPair(b, { name: 'Alex', species: 'cat', timezone: 'UTC' }))).toBe('ok');
+  });
+
+  it('leaving a waiting pair kills its link', async () => {
+    const { a, token } = await startTab();
+    await service.leave(a);
+    expect(await code(service.previewInvite(await newUser(), token))).toBe('invite_invalid');
+  });
+
+  it('needs a pair', async () => {
+    expect(await code(service.leave(await newUser()))).toBe('not_in_pair');
+  });
+});

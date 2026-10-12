@@ -5,6 +5,7 @@ import {
   type acceptInviteBody,
   type createPairBody,
   type InvitePreview,
+  type updateMemberBody,
   type Me,
   type Species,
 } from '@petty-tab/shared';
@@ -142,9 +143,42 @@ export class PairingService {
     }
   }
 
-  private async waitingMember(userId: string) {
+  /** spec §4.6: your own name or animal; the animal stays unique in the pair. */
+  async updateMember(userId: string, body: z.output<typeof updateMemberBody>): Promise<Me> {
+    const member = await this.inPair(userId);
+    try {
+      await this.prisma.member.update({
+        where: { id: member.id },
+        data: { displayName: body.name, species: body.species },
+      });
+    } catch (e) {
+      if (isUniqueViolation(e)) throw speciesTaken();
+      throw e;
+    }
+    return this.me(userId);
+  }
+
+  /** spec §4.7: leaving ends the pair for both and kills its open links. Data stays (deleted after 30 days, M7). */
+  async leave(userId: string): Promise<void> {
+    const member = await this.inPair(userId);
+    const now = this.clock.now();
+    await this.prisma.$transaction([
+      this.prisma.pair.update({ where: { id: member.pairId }, data: { endedAt: now } }),
+      this.prisma.invite.updateMany({
+        where: { pairId: member.pairId, usedAt: null, revokedAt: null },
+        data: { revokedAt: now },
+      }),
+    ]);
+  }
+
+  private async inPair(userId: string) {
     const member = await this.activeMember(userId);
     if (!member) throw new ApiError(404, 'not_in_pair', 'You do not have a tab yet.');
+    return member;
+  }
+
+  private async waitingMember(userId: string) {
+    const member = await this.inPair(userId);
     if (member.pair.members.length > 1)
       throw new ApiError(409, 'not_allowed', 'Your partner already joined.');
     return member;
