@@ -6,6 +6,7 @@ import { reelInput } from '@petty-tab/reel';
 import { SENTENCES, type CrimeKey, type Me, type TabView, type VerdictView } from '@petty-tab/shared';
 import { Button } from '@/components/Button';
 import { api } from '@/lib/api';
+import { registerServiceWorker } from '@/lib/pwa';
 import { fetchRender, shareFile, whatsAppText } from '@/lib/share';
 import { Intro } from '@/screens/Intro';
 import { InviteSheet } from '@/screens/InviteSheet';
@@ -25,6 +26,7 @@ export function Home(): ReactNode {
   const [started, setStarted] = useState(false);
   const refresh = useCallback(() => api<Me>('/me').then(setMe, noop), []);
   useEffect(() => void refresh(), [refresh]);
+  useEffect(registerServiceWorker, []);
 
   if (!me) return null;
   if (!me.member || !me.pair) {
