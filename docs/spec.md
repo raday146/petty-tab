@@ -309,7 +309,8 @@ GET    /verdicts/:id/card                302 to a signed PNG URL (404 until rend
 GET    /verdicts/:id/reel                302 to a signed MP4 URL (404 until rendered)
 GET    /events                           SSE stream for the pair: charge.created, charge.deleted, plea.guilty,
                                          plea.appeal, appeal.upheld, appeal.dropped, member.joined,
-                                         member.updated, member.left, verdict.* (M4). Each message is
+                                         member.updated, member.left, verdict.sealed,
+                                         verdict.updated. Each message is
                                          { type, chargeId? }; clients refetch /tab. 24 hours of silence
                                          sends plea.guilty too.
 POST   /push/subscriptions               { endpoint, keys }
