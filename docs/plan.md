@@ -198,7 +198,7 @@ Notes from M3:
 - Dev-screen screenshot ratios are unchanged from M1/M2.
 
 ## M4 · The Sunday verdict
-Status: done (`feat/m4-sunday-verdict`); defaults approved by the owner on 2026-10-12
+Status: done (PR #5, `feat/m4-sunday-verdict`, merged 2026-10-12); defaults approved by the owner on 2026-10-12
 
 - Week windows in the pair timezone (spec §10), sealing job every 5 minutes (pg-boss), idempotent sealing,
   verdict snapshot, top crimes, seeded random sentence, sentence change window and lock, served / confirmed
@@ -249,7 +249,7 @@ Notes from M4:
 - Screenshot ratios of the dev screens are unchanged from M1–M3.
 
 ## M5 · Shareables
-Status: not started
+Status: in progress (`feat/m5-shareables`)
 
 - `packages/reel`: the timeline from `reel.md` as data plus a React player with `seek(t)`, play, loop,
   hold-to-pause; used by the story preview screen.
