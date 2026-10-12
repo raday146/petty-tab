@@ -431,6 +431,12 @@ Notes from M7:
 - The API tests were flaky on `main` too (failures in 3 of 4 runs on a fresh database): files ran in
   parallel and the unscoped `sealDue()` and `remind()` sweeps reached other files' pairs mid-test. API test
   files now run one at a time (about 20 s); 3 of 3 runs green.
+- Phone test, 2026-10-12: an iPhone reload on the tab screen showed Next's "Application error". It did not
+  reproduce in WebKit or Chromium (with and without the service worker, over HTTPS, with the phones' exact
+  charges and 300 ms latency). `app/error.tsx` now catches any client exception with a "Try again" reload
+  and, for the phone test only, prints the error name and message. Before launch: remove that message
+  (marked `ponytail:` in the file). The reel determinism test failed once more on 2026-10-13 (3 of 180
+  frames differed) and passed on the rerun.
 - Defaults built without text or numbers in the docs, all approved by the owner on 2026-10-12:
   1. Limits: 60 writes a minute per session, 30 new sessions a minute per IP, 8 KB bodies. The 10 charges a
      day of spec §7 stay on top.
