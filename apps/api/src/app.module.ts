@@ -3,6 +3,7 @@ import { ChargesController } from './charges.controller.js';
 import { ChargesService } from './charges.service.js';
 import { Clock } from './clock.js';
 import { HealthController } from './health.controller.js';
+import { Jobs } from './jobs.js';
 import { PairingController } from './pairing.controller.js';
 import { PairingService } from './pairing.service.js';
 import { PrismaService } from './prisma.service.js';
@@ -10,7 +11,7 @@ import { SessionMiddleware } from './session.middleware.js';
 
 @Module({
   controllers: [HealthController, PairingController, ChargesController],
-  providers: [PrismaService, Clock, PairingService, ChargesService],
+  providers: [PrismaService, Clock, Jobs, PairingService, ChargesService],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer): void {

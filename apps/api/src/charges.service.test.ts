@@ -1,18 +1,22 @@
-import { afterAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { PLEA_MS, UNDO_MS, type CrimeKey } from '@petty-tab/shared';
 import { ChargesService } from './charges.service.js';
 import type { Clock } from './clock.js';
+import { Jobs, QUEUES } from './jobs.js';
 import { PairingService } from './pairing.service.js';
 import { PrismaService } from './prisma.service.js';
 
 // Real database; every test makes its own pair, so no cleanup is needed.
+// Workers are not registered here (no onModuleInit), so jobs only queue; autoGuilty() is called directly.
 const prisma = new PrismaService();
-afterAll(() => prisma.$disconnect());
+const jobs = new Jobs();
+beforeAll(() => jobs.start());
+afterAll(() => Promise.all([prisma.$disconnect(), jobs.onModuleDestroy()]));
 
 let now: Date;
 const clock = { now: () => now } as Clock;
 const pairing = new PairingService(prisma, clock);
-const service = new ChargesService(prisma, clock, pairing);
+const service = new ChargesService(prisma, clock, pairing, jobs);
 beforeEach(() => {
   now = new Date('2026-10-12T10:00:00Z');
 });
@@ -84,6 +88,14 @@ describe('undo (spec §8)', () => {
     later(UNDO_MS - 1);
     await service.undo(a, id);
     expect((await service.tab(b)).charges).toEqual([]);
+  });
+
+  it('cancels the held push', async () => {
+    const { a } = await pair();
+    const id = await file(a);
+    expect((await jobs.boss.getJobById(QUEUES.chargePush, id))?.state).toBe('created');
+    await service.undo(a, id);
+    expect((await jobs.boss.getJobById(QUEUES.chargePush, id))?.state).toBe('cancelled');
   });
 
   it('is refused at 10 seconds', async () => {
@@ -162,6 +174,27 @@ describe('pleas and appeals (spec §8)', () => {
     const id = await file(a);
     expect(await code(service.plead(outsider, id, { plea: 'guilty' }))).toBe('not_allowed');
     expect(await code(service.undo(outsider, 'not-a-uuid'))).toBe('not_allowed');
+  });
+});
+
+describe('auto-guilty (spec §8, Open decision 2)', () => {
+  it('turns charges pending for 24 hours guilty, resolved at the 24-hour mark', async () => {
+    const { a } = await pair();
+    const old = await file(a);
+    const filedAt = now;
+    later(PLEA_MS - 1000);
+    const young = await file(a);
+    later(1000);
+    const flipped = await service.autoGuilty();
+    expect(flipped.map((c) => c.id)).toContain(old);
+    expect(flipped.map((c) => c.id)).not.toContain(young);
+    const row = await prisma.charge.findUniqueOrThrow({ where: { id: old } });
+    expect([row.status, row.resolvedAt, row.pleadedAt]).toEqual([
+      'guilty',
+      new Date(filedAt.getTime() + PLEA_MS),
+      null,
+    ]);
+    expect((await prisma.charge.findUniqueOrThrow({ where: { id: young } })).status).toBe('pending');
   });
 });
 

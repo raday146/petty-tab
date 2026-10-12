@@ -1,11 +1,13 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, type OnModuleInit } from '@nestjs/common';
 import {
   canUndo,
   currentWeek,
   FILING_LIMIT,
   FILING_WINDOW_MS,
+  PLEA_MS,
   tally,
   transition,
+  UNDO_MS,
   type appealBody,
   type fileChargeBody,
   type pleaBody,
@@ -16,6 +18,7 @@ import {
 import { z } from 'zod';
 import { Clock } from './clock.js';
 import { ApiError } from './errors.js';
+import { Jobs, QUEUES } from './jobs.js';
 import { PairingService } from './pairing.service.js';
 import { PrismaService } from './prisma.service.js';
 
@@ -25,12 +28,22 @@ const conflict = (code: string): ApiError =>
 
 /** spec §8–9: filing, undo, pleas, appeals, and the week's tab. */
 @Injectable()
-export class ChargesService {
+export class ChargesService implements OnModuleInit {
   constructor(
     private readonly prisma: PrismaService,
     private readonly clock: Clock,
     private readonly pairing: PairingService,
+    private readonly jobs: Jobs,
   ) {}
+
+  async onModuleInit(): Promise<void> {
+    await this.jobs.start();
+    const { boss } = this.jobs;
+    // ponytail: the held push is a no-op until Web Push lands in M6; the 10 s hold and its cancel are real.
+    await boss.work(QUEUES.chargePush, async () => undefined);
+    await boss.work(QUEUES.autoGuilty, () => this.autoGuilty());
+    await boss.schedule(QUEUES.autoGuilty, '* * * * *');
+  }
 
   /** The caller, the partner and the current week; `pair_incomplete` while waiting. */
   private async complete(userId: string) {
@@ -73,6 +86,8 @@ export class ChargesService {
         createdAt: now,
       },
     });
+    // spec §8: the accused's push waits out the undo window; the job id is the charge id, so undo can cancel it.
+    await this.jobs.boss.send(QUEUES.chargePush, { chargeId: id }, { id, startAfter: UNDO_MS / 1000 });
     return { id };
   }
 
@@ -83,6 +98,19 @@ export class ChargesService {
     if (refused) throw conflict(refused);
     const { count } = await this.prisma.charge.deleteMany({ where: { id, status: 'pending' } });
     if (count !== 1) throw conflict('already_pleaded');
+    await this.jobs.boss.cancel(QUEUES.chargePush, id);
+  }
+
+  /**
+   * spec §8: 24 hours without a plea counts as guilty, resolved at the 24-hour mark. Pleas past it are
+   * already refused by transition(), so how late this runs never changes an outcome.
+   */
+  async autoGuilty(): Promise<{ id: string; pairId: string }[]> {
+    const cutoff = new Date(this.clock.now().getTime() - PLEA_MS);
+    return this.prisma.$queryRaw`
+      UPDATE charges SET status = 'guilty', resolved_at = created_at + interval '24 hours'
+      WHERE status = 'pending' AND created_at <= ${cutoff}
+      RETURNING id, pair_id AS "pairId"`;
   }
 
   async plead(userId: string, id: string, body: z.output<typeof pleaBody>): Promise<void> {
