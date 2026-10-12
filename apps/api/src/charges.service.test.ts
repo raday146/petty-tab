@@ -3,6 +3,7 @@ import { PLEA_MS, UNDO_MS, type CrimeKey } from '@petty-tab/shared';
 import { ChargesService } from './charges.service.js';
 import type { Clock } from './clock.js';
 import { Jobs, QUEUES } from './jobs.js';
+import { Events } from './events.js';
 import { PairingService } from './pairing.service.js';
 import { PrismaService } from './prisma.service.js';
 
@@ -15,8 +16,9 @@ afterAll(() => Promise.all([prisma.$disconnect(), jobs.onModuleDestroy()]));
 
 let now: Date;
 const clock = { now: () => now } as Clock;
-const pairing = new PairingService(prisma, clock);
-const service = new ChargesService(prisma, clock, pairing, jobs);
+const events = new Events();
+const pairing = new PairingService(prisma, clock, events);
+const service = new ChargesService(prisma, clock, pairing, jobs, events);
 beforeEach(() => {
   now = new Date('2026-10-12T10:00:00Z');
 });
@@ -88,6 +90,20 @@ describe('undo (spec §8)', () => {
     later(UNDO_MS - 1);
     await service.undo(a, id);
     expect((await service.tab(b)).charges).toEqual([]);
+  });
+
+  it('tells the pair live: created, then deleted', async () => {
+    const { a } = await pair();
+    const { pairId } = await pairing.inPair(a);
+    const got: unknown[] = [];
+    const sub = events.forPair(pairId).subscribe((m) => got.push(m.data));
+    const id = await file(a);
+    await service.undo(a, id);
+    sub.unsubscribe();
+    expect(got).toEqual([
+      { type: 'charge.created', chargeId: id },
+      { type: 'charge.deleted', chargeId: id },
+    ]);
   });
 
   it('cancels the held push', async () => {
