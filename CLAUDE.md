@@ -60,7 +60,8 @@ pnpm test                         # Vitest across packages, plus the art package
                                   # (the API tests need the db up and migrated)
 pnpm --filter @petty-tab/web exec playwright install chromium   # once, before the first e2e run
 pnpm e2e                          # Playwright end-to-end and screenshot tests (starts web on :3100 and
-                                  # the API on :3001; needs the db up and migrated)
+                                  # the API on :3001 with E2E_HOOKS=1; needs the db up and migrated.
+                                  # An API you already run on :3001 is reused: start it with E2E_HOOKS=1)
 DIFF_DIR=/tmp/diffs pnpm e2e      # same, and write each screen's screenshot + diff image there
 pnpm lint && pnpm typecheck       # ESLint + Prettier check; tsc in every package
 pnpm format                       # Prettier write

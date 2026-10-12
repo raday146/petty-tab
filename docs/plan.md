@@ -198,7 +198,7 @@ Notes from M3:
 - Dev-screen screenshot ratios are unchanged from M1/M2.
 
 ## M4 · The Sunday verdict
-Status: not started
+Status: done (`feat/m4-sunday-verdict`), awaiting review
 
 - Week windows in the pair timezone (spec §10), sealing job every 5 minutes (pg-boss), idempotent sealing,
   verdict snapshot, top crimes, seeded random sentence, sentence change window and lock, served / confirmed
@@ -207,14 +207,46 @@ Status: not started
 - Verdict screen on real data with the reveal sequence; the sentence sheet.
 
 Done when:
-- [ ] Time-travel tests with an injected clock: sealing at Sunday 20:00 in Asia/Jerusalem, America/New_York
+- [x] Time-travel tests with an injected clock: sealing at Sunday 20:00 in Asia/Jerusalem, America/New_York
       and Pacific/Auckland, including a DST change week
-- [ ] Sealing twice produces one verdict
-- [ ] Writes against a charge after its `week_end` but before sealing are refused with `week_closed`
-- [ ] The winner's first share locks the sentence; the loser's share does not
-- [ ] Tie, unresolved appeal and still-pending charge cases match spec §10
-- [ ] The verdict screen matches `reference/screens/12-verdict-card.png` (winner's view; names winner first)
-- [ ] If the owner has not approved the tie layout by then, the default is built and flagged in the summary
+      (`packages/shared/src/week.test.ts` "endedWeeks (spec §10 sealing)": one second before / at Sunday 20:00,
+      the week across each zone's DST change (Jerusalem 2026-10-25, New York 2026-11-01, Auckland 2026-09-27 and
+      2026-04-05), and catching up on missed weeks; `apps/api/src/verdicts.service.test.ts` "sealing at Sunday
+      20:00 local (spec §10), time travel" does the same end to end against the database for all three zones)
+- [x] Sealing twice produces one verdict
+      (`verdicts.service.test.ts` "idempotent sealing": two concurrent runs plus a third; the unique
+      `(pair_id, week_start)` key makes a second seal a no-op)
+- [x] Writes against a charge after its `week_end` but before sealing are refused with `week_closed`
+      (`verdicts.service.test.ts` "week_closed › refuses undo, plea and appeal decisions after week_end, before
+      the sealer runs")
+- [x] The winner's first share locks the sentence; the loser's share does not
+      (`verdicts.service.test.ts` "the sentence › locks at the winner's first share…" and "locks at Monday 20:00
+      local without a share"; `apps/web/e2e/verdict.spec.ts` "Maya wins the week…": the dice stays after Alex
+      shares and goes after Maya shares)
+- [x] Tie, unresolved appeal and still-pending charge cases match spec §10
+      (`packages/shared/src/verdict.test.ts` "judge (spec §10)"; `verdicts.service.test.ts` "the sealed week ›
+      persists pending as guilty and unresolved appeals as dropped, resolved at week_end" and "calls a tie…";
+      `verdict.spec.ts` "a tie: Dead even, no sentence, nothing owed")
+- [x] The verdict screen matches `reference/screens/12-verdict-card.png` (winner's view; names winner first)
+      (`verdict.spec.ts` "Maya wins the week…" seals real charges and passes `expectMatchesReference` on
+      `12-verdict-card.png` at the default tolerance; the loser's phone also reads "Maya vs. Alex")
+- [x] If the owner has not approved the tie layout by then, the default is built and flagged in the summary
+      (the `design.md` §6 default; still unapproved, flagged in the M4 summary)
+
+Notes from M4:
+- `verdicts` has a unique `(pair_id, week_start)`; the sealer inserts with `ON CONFLICT DO NOTHING` inside the
+  transaction that also persists the final charge statuses. The sentence is seeded by the new row's id.
+- The sealer walks every week from the pair's last verdict (or the partner's join) with `endedWeeks()`, so a
+  sealer that was down catches up oldest first. An empty week seals as a "Dead even" verdict (spec §10 read
+  literally; flagged).
+- `week_closed` is checked once, in `ChargesService.charge()`, which undo, plea and decide all go through.
+- Members now take `joined_at` from the injected clock (it was the database's `now()`), so weeks can time-travel.
+- `POST /api/dev/seal` exists only with `E2E_HOOKS=1`. It seals the caller's current week as if its Sunday
+  20:00 had come, without moving any other pair's clock, so e2e spec files still run in parallel.
+- Not in M4: card and reel render jobs (M5), the share sheet itself (M5; the share buttons already call
+  `POST /verdicts/:id/shared`), and the verdict pushes (M6). The unconfirmed line has no reference screen: a
+  quiet centred line under the scoreboard. The verdict does not open by itself when sealed; the chip opens it.
+- Screenshot ratios of the dev screens are unchanged from M1–M3.
 
 ## M5 · Shareables
 Status: not started
