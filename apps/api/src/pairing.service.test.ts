@@ -1,8 +1,12 @@
+import { existsSync } from 'node:fs';
+import { mkdir, writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import { INVITE_TTL_MS, type Species } from '@petty-tab/shared';
 import type { Clock } from './clock.js';
 import { sha256 } from './crypto.js';
 import { Events } from './events.js';
+import { STORAGE_DIR } from './files.controller.js';
 import { PairingService } from './pairing.service.js';
 import { PrismaService } from './prisma.service.js';
 import type { PushService } from './push.service.js';
@@ -183,5 +187,59 @@ describe('rename, change animal, leave (spec §4.6–4.7)', () => {
 
   it('needs a pair', async () => {
     expect(await code(service.leave(await newUser()))).toBe('not_in_pair');
+  });
+});
+
+describe('data retention (spec §4.7) and delete everything', () => {
+  /** A complete pair with one sealed verdict whose card is on disk. */
+  async function pairWithRender() {
+    const { a, token } = await startTab();
+    const b = await newUser();
+    await service.acceptInvite(b, token, { name: 'Alex', species: 'bear' });
+    const { pairId } = await service.inPair(a);
+    const verdict = await prisma.verdict.create({
+      data: { pairId, weekStart: now, weekEnd: now, sealedAt: now, isTie: true, snapshot: {} },
+    });
+    const dir = join(STORAGE_DIR, 'verdicts', verdict.id);
+    await mkdir(dir, { recursive: true });
+    await writeFile(join(dir, 'card-x.png'), '');
+    return { a, b, pairId, dir };
+  }
+  const pairExists = async (id: string): Promise<boolean> => (await prisma.pair.count({ where: { id } })) > 0;
+
+  it('keeps an ended pair 30 days, then deletes it with its renders', async () => {
+    const { a, pairId, dir } = await pairWithRender();
+    await service.leave(a);
+    now = new Date(now.getTime() + 30 * 864e5 - 1);
+    await service.purge({ pairId });
+    expect(await pairExists(pairId)).toBe(true);
+    now = new Date(now.getTime() + 1);
+    await service.purge({ pairId });
+    expect(await pairExists(pairId)).toBe(false);
+    expect(existsSync(dir)).toBe(false);
+  });
+
+  it('never deletes an active pair', async () => {
+    const { pairId } = await pairWithRender();
+    now = new Date(now.getTime() + 365 * 864e5);
+    await service.purge({ pairId });
+    expect(await pairExists(pairId)).toBe(true);
+  });
+
+  it('deletes the user, every pair they were in and its renders at once; the partner is left with none', async () => {
+    const { a, b, pairId, dir } = await pairWithRender();
+    await prisma.session.create({ data: { userId: a, tokenHash: sha256(`s-${a}`), expiresAt: now } });
+    await service.deleteEverything(a);
+    expect(await prisma.user.count({ where: { id: a } })).toBe(0);
+    expect(await prisma.session.count({ where: { userId: a } })).toBe(0);
+    expect(await pairExists(pairId)).toBe(false);
+    expect(existsSync(dir)).toBe(false);
+    expect(await service.me(b)).toEqual({ member: null, pair: null });
+  });
+
+  it('deletes a user who never joined a tab', async () => {
+    const a = await newUser();
+    await service.deleteEverything(a);
+    expect(await prisma.user.count({ where: { id: a } })).toBe(0);
   });
 });

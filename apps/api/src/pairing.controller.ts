@@ -1,4 +1,5 @@
-import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post } from '@nestjs/common';
+import type { ServerResponse } from 'node:http';
+import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Res } from '@nestjs/common';
 import {
   acceptInviteBody,
   createPairBody,
@@ -8,7 +9,7 @@ import {
 } from '@petty-tab/shared';
 import { parse } from './errors.js';
 import { PairingService, type InviteLink } from './pairing.service.js';
-import { UserId } from './session.middleware.js';
+import { clearCookie, UserId } from './session.middleware.js';
 
 /** spec §14: identity and pairing endpoints. Bodies are validated with the shared zod schemas. */
 @Controller()
@@ -18,6 +19,16 @@ export class PairingController {
   @Get('me')
   me(@UserId() userId: string): Promise<Me> {
     return this.pairing.me(userId);
+  }
+
+  @Delete('me')
+  @HttpCode(204)
+  async deleteEverything(
+    @UserId() userId: string,
+    @Res({ passthrough: true }) res: ServerResponse,
+  ): Promise<void> {
+    await this.pairing.deleteEverything(userId);
+    clearCookie(res);
   }
 
   @Post('pairs')

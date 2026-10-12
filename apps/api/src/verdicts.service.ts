@@ -49,6 +49,9 @@ export class VerdictsService implements OnModuleInit {
     // Every 15 minutes, so Wednesday 19:00 lands on time in :30 and :45 zones too.
     await this.jobs.boss.work(QUEUES.reminder, () => this.remind());
     await this.jobs.boss.schedule(QUEUES.reminder, '*/15 * * * *');
+    // Retention lives with the other crons; the rule itself is PairingService.purge.
+    await this.jobs.boss.work(QUEUES.purge, () => this.pairing.purge());
+    await this.jobs.boss.schedule(QUEUES.purge, '30 3 * * *');
     // Cheap updates: take them in batches so a renderer catching up never queues behind a 2 s poll per job.
     await this.jobs.boss.work<RenderedJob>(QUEUES.rendered, { batchSize: 20 }, async (batch) => {
       for (const job of batch) await this.rendered(job.data);

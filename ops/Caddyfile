@@ -1,0 +1,8 @@
+# HTTPS for $DOMAIN (Let's Encrypt; "localhost" gets Caddy's local CA for a rehearsal). Everything goes to
+# the web app, which proxies /api to the API on the same origin. Caddy sets X-Forwarded-For itself and drops
+# what the client sent, so the API's per-IP limit sees the real client.
+{$DOMAIN} {
+	encode zstd gzip
+	header Strict-Transport-Security "max-age=31536000; includeSubDomains"
+	reverse_proxy web:3000
+}
