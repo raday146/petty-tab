@@ -3,7 +3,17 @@ import type { Owed } from '@/components/tab/Scoreboard';
 import type { TabCharge } from '@/screens/Tab';
 import type { VerdictData } from '@/screens/Verdict';
 
-export const SCREENS = ['intro', 'invite', 'picker', 'tab', 'plea', 'appeal', 'waiting', 'verdict'] as const;
+export const SCREENS = [
+  'intro',
+  'invite',
+  'picker',
+  'tab',
+  'plea',
+  'appeal',
+  'waiting',
+  'verdict',
+  'story',
+] as const;
 export type ScreenName = (typeof SCREENS)[number];
 
 // The prototype's household, so screens line up with reference/screens/.

@@ -34,13 +34,15 @@ interface Props {
   onBack: () => void;
   onSentence: (sentence: SentenceKey) => void;
   onShare: (target: 'story' | 'whatsapp' | 'card') => void;
+  /** The rendered files are in hand (spec §11); until then the share buttons read "Printing…". */
+  ready?: { card: boolean; reel: boolean };
   onServed: () => void;
   onConfirm: () => void;
 }
 
 const reduced = (): boolean => matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-export function Verdict({ verdict: v, viewer, ...on }: Props): ReactNode {
+export function Verdict({ verdict: v, viewer, ready = { card: true, reel: true }, ...on }: Props): ReactNode {
   const [run, setRun] = useState(0);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [flip, setFlip] = useState(0);
@@ -128,17 +130,17 @@ export function Verdict({ verdict: v, viewer, ...on }: Props): ReactNode {
 
       <div className={s.sharebar}>
         {v.tie ? (
-          <Button onClick={() => on.onShare('card')}>
+          <Button onClick={() => on.onShare('card')} disabled={!ready.card}>
             <ShareIcon />
-            Share card
+            {ready.card ? 'Share card' : 'Printing…'}
           </Button>
         ) : (
           <>
-            <Button onClick={() => on.onShare('story')}>
+            <Button onClick={() => on.onShare('story')} disabled={!ready.reel}>
               <ShareIcon />
-              Share story
+              {ready.reel ? 'Share story' : 'Printing…'}
             </Button>
-            <Button variant="outline" onClick={() => on.onShare('whatsapp')}>
+            <Button variant="outline" onClick={() => on.onShare('whatsapp')} disabled={!ready.reel}>
               <WhatsAppIcon />
               Send to WhatsApp
             </Button>
