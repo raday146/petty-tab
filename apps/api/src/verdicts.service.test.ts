@@ -14,7 +14,11 @@ import { VerdictsService } from './verdicts.service.js';
 const prisma = new PrismaService();
 const jobs = new Jobs();
 beforeAll(() => jobs.start());
-afterAll(() => Promise.all([prisma.$disconnect(), jobs.onModuleDestroy()]));
+// The renders these tests queue would otherwise wait for a local renderer to draw them.
+afterAll(async () => {
+  await jobs.boss.deleteQueuedJobs(QUEUES.render);
+  await Promise.all([prisma.$disconnect(), jobs.onModuleDestroy()]);
+});
 
 let now: Date;
 const clock = { now: () => now } as Clock;

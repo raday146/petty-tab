@@ -5,15 +5,6 @@ import { Reel, reelInput, renderWav, type ReelHandle } from '@petty-tab/reel';
 import { renderInput, type RenderInput } from '@petty-tab/shared';
 import { VerdictCard } from '@/screens/Verdict';
 
-declare global {
-  interface Window {
-    /** Validates the input and resolves once it is drawn with its fonts loaded. */
-    __render?: (input: unknown) => Promise<void>;
-    /** Reel only: one frame at t (resolves after it is painted), and the soundtrack as base64 WAV. */
-    __reel?: { seek: (t: number) => Promise<void>; wav: () => Promise<string> };
-  }
-}
-
 const base64 = (buf: ArrayBuffer): Promise<string> =>
   new Promise((done) => {
     const r = new FileReader();
