@@ -6,19 +6,25 @@ import { Jobs, QUEUES } from './jobs.js';
 import { Events } from './events.js';
 import { PairingService } from './pairing.service.js';
 import { PrismaService } from './prisma.service.js';
+import { PushService } from './push.service.js';
 
 // Real database; every test makes its own pair, so no cleanup is needed.
 // Workers are not registered here (no onModuleInit), so jobs only queue; autoGuilty() is called directly.
 const prisma = new PrismaService();
 const jobs = new Jobs();
 beforeAll(() => jobs.start());
-afterAll(() => Promise.all([prisma.$disconnect(), jobs.onModuleDestroy()]));
+// The pushes these tests queue would otherwise wait for a local API to send them.
+afterAll(async () => {
+  await jobs.boss.deleteQueuedJobs(QUEUES.push);
+  await Promise.all([prisma.$disconnect(), jobs.onModuleDestroy()]);
+});
 
 let now: Date;
 const clock = { now: () => now } as Clock;
 const events = new Events();
-const pairing = new PairingService(prisma, clock, events);
-const service = new ChargesService(prisma, clock, pairing, jobs, events);
+const push = new PushService(prisma, clock, jobs);
+const pairing = new PairingService(prisma, clock, events, push);
+const service = new ChargesService(prisma, clock, pairing, jobs, events, push);
 beforeEach(() => {
   now = new Date('2026-10-12T10:00:00Z');
 });

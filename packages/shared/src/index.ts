@@ -6,3 +6,4 @@ export * from './charges.ts';
 export * from './week.ts';
 export type { Species } from '@petty-tab/art';
 export * from './verdict.ts';
+export * from './notify.ts';

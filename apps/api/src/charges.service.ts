@@ -5,6 +5,7 @@ import {
   FILING_LIMIT,
   FILING_WINDOW_MS,
   PLEA_MS,
+  pushText,
   tally,
   transition,
   UNDO_MS,
@@ -24,6 +25,7 @@ import { Events } from './events.js';
 import { Jobs, QUEUES } from './jobs.js';
 import { PairingService } from './pairing.service.js';
 import { PrismaService } from './prisma.service.js';
+import { PushService } from './push.service.js';
 
 const notAllowed = (): ApiError => new ApiError(403, 'not_allowed', 'That is not yours to decide.');
 const conflict = (code: string): ApiError =>
@@ -38,13 +40,12 @@ export class ChargesService implements OnModuleInit {
     private readonly pairing: PairingService,
     private readonly jobs: Jobs,
     private readonly events: Events,
+    private readonly push: PushService,
   ) {}
 
   async onModuleInit(): Promise<void> {
     await this.jobs.start();
     const { boss } = this.jobs;
-    // ponytail: the held push is a no-op until Web Push lands in M6; the 10 s hold and its cancel are real.
-    await boss.work(QUEUES.chargePush, async () => undefined);
     await boss.work(QUEUES.autoGuilty, () => this.autoGuilty());
     await boss.schedule(QUEUES.autoGuilty, '* * * * *');
   }
@@ -72,7 +73,7 @@ export class ChargesService implements OnModuleInit {
       throw new ApiError(409, 'week_closed', 'That week is closed.');
     }
     const actor = charge.filerId === me.id ? ('filer' as const) : ('accused' as const);
-    return { charge, actor, age: now.getTime() - charge.createdAt.getTime() };
+    return { me, charge, actor, age: now.getTime() - charge.createdAt.getTime() };
   }
 
   async file(userId: string, body: z.output<typeof fileChargeBody>): Promise<{ id: string }> {
@@ -128,7 +129,7 @@ export class ChargesService implements OnModuleInit {
   }
 
   async plead(userId: string, id: string, body: z.output<typeof pleaBody>): Promise<void> {
-    const { charge, actor, age } = await this.charge(userId, id);
+    const { me, charge, actor, age } = await this.charge(userId, id);
     const next = transition(charge.status, actor, body.plea, age);
     if ('error' in next) throw next.error === 'not_allowed' ? notAllowed() : conflict(next.error);
     const now = this.clock.now();
@@ -139,10 +140,19 @@ export class ChargesService implements OnModuleInit {
     });
     if (count !== 1) throw conflict('already_pleaded');
     this.events.emit(charge.pairId, body.plea === 'guilty' ? 'plea.guilty' : 'plea.appeal', id);
+    const name = me.displayName;
+    await this.push.notify(
+      charge.filerId,
+      pushText(
+        body.plea === 'guilty'
+          ? { type: 'plea.guilty', name }
+          : { type: 'plea.appeal', name, crimeKey: charge.crimeKey as CrimeKey },
+      ),
+    );
   }
 
   async decide(userId: string, id: string, body: z.output<typeof appealBody>): Promise<void> {
-    const { charge, actor, age } = await this.charge(userId, id);
+    const { me, charge, actor, age } = await this.charge(userId, id);
     const next = transition(charge.status, actor, body.decision, age);
     if ('error' in next) throw notAllowed();
     const { count } = await this.prisma.charge.updateMany({
@@ -150,7 +160,9 @@ export class ChargesService implements OnModuleInit {
       data: { status: next.status, resolvedAt: this.clock.now() },
     });
     if (count !== 1) throw notAllowed();
-    this.events.emit(charge.pairId, body.decision === 'uphold' ? 'appeal.upheld' : 'appeal.dropped', id);
+    const type = body.decision === 'uphold' ? 'appeal.upheld' : 'appeal.dropped';
+    this.events.emit(charge.pairId, type, id);
+    await this.push.notify(charge.accusedId, pushText({ type, name: me.displayName }));
   }
 
   async tab(userId: string): Promise<TabView> {

@@ -5,13 +5,16 @@ import { sha256 } from './crypto.js';
 import { Events } from './events.js';
 import { PairingService } from './pairing.service.js';
 import { PrismaService } from './prisma.service.js';
+import type { PushService } from './push.service.js';
 
 // Real database; every test makes its own users, so no cleanup is needed.
 const prisma = new PrismaService();
 afterAll(() => prisma.$disconnect());
 
 let now: Date;
-const service = new PairingService(prisma, { now: () => now } as Clock, new Events());
+// Pushes are covered in push.service.test.ts.
+const push = { notify: async () => undefined } as unknown as PushService;
+const service = new PairingService(prisma, { now: () => now } as Clock, new Events(), push);
 beforeEach(() => {
   now = new Date('2026-10-12T10:00:00Z');
 });

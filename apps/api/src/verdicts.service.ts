@@ -2,6 +2,8 @@ import { Injectable, type OnModuleInit } from '@nestjs/common';
 import {
   endedWeeks,
   judge,
+  pushText,
+  reminderDue,
   renderKey,
   seedSentence,
   sentenceDeadline,
@@ -24,6 +26,7 @@ import { Events } from './events.js';
 import { Jobs, QUEUES } from './jobs.js';
 import { PairingService } from './pairing.service.js';
 import { PrismaService } from './prisma.service.js';
+import { PushService } from './push.service.js';
 
 const notAllowed = (): ApiError => new ApiError(403, 'not_allowed', 'That is not yours to decide.');
 
@@ -36,12 +39,16 @@ export class VerdictsService implements OnModuleInit {
     private readonly pairing: PairingService,
     private readonly jobs: Jobs,
     private readonly events: Events,
+    private readonly push: PushService,
   ) {}
 
   async onModuleInit(): Promise<void> {
     await this.jobs.start();
     await this.jobs.boss.work(QUEUES.seal, () => this.sealDue());
     await this.jobs.boss.schedule(QUEUES.seal, '*/5 * * * *');
+    // Every 15 minutes, so Wednesday 19:00 lands on time in :30 and :45 zones too.
+    await this.jobs.boss.work(QUEUES.reminder, () => this.remind());
+    await this.jobs.boss.schedule(QUEUES.reminder, '*/15 * * * *');
     // Cheap updates: take them in batches so a renderer catching up never queues behind a 2 s poll per job.
     await this.jobs.boss.work<RenderedJob>(QUEUES.rendered, { batchSize: 20 }, async (batch) => {
       for (const job of batch) await this.rendered(job.data);
@@ -120,8 +127,38 @@ export class VerdictsService implements OnModuleInit {
     });
     if (!id) return false;
     this.events.emit(pairId, 'verdict.sealed');
+    const { winnerId, isTie } = await this.prisma.verdict.findUniqueOrThrow({ where: { id } });
+    for (const m of members) {
+      const type = isTie ? 'verdict.tie' : m.id === winnerId ? 'verdict.won' : 'verdict.lost';
+      await this.push.notify(m.id, pushText({ type }));
+    }
     await this.queueRenders(id);
     return true;
+  }
+
+  /** spec §12: the loser's Wednesday 19:00 reminder, while the sentence is neither served nor confirmed. */
+  async remind(): Promise<number> {
+    const now = this.clock.now();
+    // ponytail: scans every open sentence each sweep; add an index or a due-at column if that list grows.
+    const open = await this.prisma.verdict.findMany({
+      where: { isTie: false, servedAt: null, confirmedAt: null, pair: { endedAt: null } },
+      include: { pair: true },
+    });
+    let sent = 0;
+    for (const v of open) {
+      if (!reminderDue(v.sealedAt, v.remindedAt, v.pair.timezone, now)) continue;
+      // Only one of two overlapping sweeps moves reminded_at on.
+      const { count } = await this.prisma.verdict.updateMany({
+        where: { id: v.id, remindedAt: v.remindedAt },
+        data: { remindedAt: now },
+      });
+      if (!count) continue;
+      const snap = v.snapshot as unknown as VerdictSnapshot;
+      const sentenceKey = v.sentenceKey as SentenceKey;
+      await this.push.notify(v.loserId!, pushText({ type: 'reminder', name: snap.winner.name, sentenceKey }));
+      sent++;
+    }
+    return sent;
   }
 
   /** spec §11: a card for every verdict, a reel unless it is a tie, drawn from the snapshot. */

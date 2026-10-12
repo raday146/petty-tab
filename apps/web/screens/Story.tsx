@@ -7,6 +7,7 @@ import { Art } from '@/components/Art';
 import { CloseIcon, HeartIcon, PlayIcon, SendIcon, SoundIcon } from '@/components/icons';
 import type { Member } from '@/components/tab/Scoreboard';
 import { cx } from '@/lib/cx';
+import { setSound as saveSound, soundIsOn } from '@/lib/sfx';
 import s from './Story.module.css';
 
 interface Props {
@@ -32,7 +33,7 @@ export function Story({ reel, viewer, partner, onClose, still }: Props): ReactNo
   const [held, setHeld] = useState(false);
   // Story only mounts on the client after a tap (or with `still`), so matchMedia is there.
   const [paused, setPaused] = useState(() => still === undefined && reduced());
-  const [sound, setSound] = useState(true);
+  const [sound, setSound] = useState(soundIsOn);
   const handle = `${slug(viewer.name, 'you')}.${SPECIES[viewer.species].tag.replace('The ', 'the').toLowerCase()}`;
 
   // reel.md §9: plays on open and loops; reduced motion opens paused on the final frame.
@@ -86,7 +87,10 @@ export function Story({ reel, viewer, partner, onClose, still }: Props): ReactNo
               type="button"
               aria-label="Sound"
               aria-pressed={sound}
-              onClick={() => setSound((on) => !on)}
+              onClick={() => {
+                saveSound(!sound);
+                setSound(!sound);
+              }}
             >
               <SoundIcon on={sound} />
             </button>
