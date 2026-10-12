@@ -304,8 +304,8 @@ Notes from M5:
   the full run.
 
 ## M6 · PWA and notifications
-Status: in review (`feat/m6-pwa-push`); defaults approved by the owner on 2026-10-12, real-phone push check
-on staging approved as deferred
+Status: done (PR #7, `feat/m6-pwa-push`, merged 2026-10-12); defaults approved by the owner on 2026-10-12,
+real-phone push check on staging approved as deferred (it moves into the M7 phone test plan)
 
 - Web app manifest (name, theme colours, icons from the coffee-cup crown), service worker with an offline
   shell, an install hint (with the iPhone "Add to Home Screen" steps).
@@ -362,7 +362,7 @@ Notes from M6:
   branch: 2 and 4 in two runs, different tests each time). Every spec passes when run on its own.
 
 ## M7 · Launch hardening
-Status: not started
+Status: in progress (`feat/m7-launch`)
 
 - Rate limits on every write endpoint, request size limits, security headers, CSRF protection for cookie auth.
 - Pair deletion after 30 days; a "delete everything" button.
