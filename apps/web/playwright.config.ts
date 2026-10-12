@@ -20,6 +20,13 @@ export default defineConfig({
       url: `http://localhost:${port}`,
       reuseExistingServer: !process.env.CI,
     },
+    // pwa.spec.ts: the offline shell needs a production build (the dev runtime waits for its HMR socket).
+    {
+      command: 'next build && next start -p 3101',
+      url: 'http://localhost:3101',
+      reuseExistingServer: !process.env.CI,
+      timeout: 180_000,
+    },
     // The pairing tests need the API (and its database: `docker compose up -d db && pnpm db:migrate`).
     {
       command: 'pnpm --filter @petty-tab/api build && pnpm --filter @petty-tab/api start',
