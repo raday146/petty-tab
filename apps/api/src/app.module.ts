@@ -5,6 +5,7 @@ import { Clock } from './clock.js';
 import { EventsController } from './events.controller.js';
 import { FilesController } from './files.controller.js';
 import { Events } from './events.js';
+import { GuardMiddleware } from './guard.middleware.js';
 import { HealthController } from './health.controller.js';
 import { Jobs } from './jobs.js';
 import { PairingController } from './pairing.controller.js';
@@ -44,9 +45,9 @@ const dev = process.env.E2E_HOOKS === '1' ? [DevController] : [];
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer): void {
-    // Every route but /health has a session (spec §3).
+    // Every route but /health is guarded (CSRF, rate limits) and has a session (spec §3), in that order.
     consumer
-      .apply(SessionMiddleware)
+      .apply(GuardMiddleware, SessionMiddleware)
       .forRoutes(
         PairingController,
         ChargesController,
