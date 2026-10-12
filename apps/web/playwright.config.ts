@@ -23,6 +23,8 @@ export default defineConfig({
       command: 'pnpm --filter @petty-tab/api build && pnpm --filter @petty-tab/api start',
       url: 'http://localhost:3001/api/health',
       reuseExistingServer: !process.env.CI,
+      // Mounts POST /api/dev/seal for verdict.spec.ts; never set outside the e2e run.
+      env: { E2E_HOOKS: '1' },
     },
   ],
 });

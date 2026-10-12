@@ -43,12 +43,11 @@ export class VerdictsService implements OnModuleInit {
    * spec §10: seals every ended, unsealed week of every complete pair, oldest first, so a sealer that was
    * down catches up. Returns how many verdicts it sealed.
    */
-  async sealDue(): Promise<number> {
-    const now = this.clock.now();
+  async sealDue(now = this.clock.now(), only?: { pairId: string }): Promise<number> {
     // ponytail: reads every active pair each run; store the next week_end on the pair and index it if the
     // pair count makes this slow.
     const pairs = await this.prisma.pair.findMany({
-      where: { endedAt: null },
+      where: { endedAt: null, id: only?.pairId },
       include: {
         members: { orderBy: { joinedAt: 'asc' } },
         verdicts: { orderBy: { weekStart: 'desc' }, take: 1 },
