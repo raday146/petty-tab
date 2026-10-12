@@ -4,7 +4,9 @@
     "rootDir": "src",
     "outDir": "dist",
     "experimentalDecorators": true,
-    "emitDecoratorMetadata": true
+    "emitDecoratorMetadata": true,
+    // @petty-tab/shared ships .ts source; Node 24 strips its types at runtime.
+    "rewriteRelativeImportExtensions": true
   },
   "include": ["src"]
 }
