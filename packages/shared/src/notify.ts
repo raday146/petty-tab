@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import { SPECIES, type Species } from '@petty-tab/art';
 import { CRIMES, SENTENCES, type CrimeKey, type SentenceKey } from './catalog.ts';
 import { lastReminderTime } from './week.ts';
@@ -62,3 +63,17 @@ export function reminderDue(sealedAt: Date, remindedAt: Date | null, tz: string,
     (!remindedAt || remindedAt < wednesday)
   );
 }
+
+/**
+ * The browser push services. The API POSTs to the endpoint it is given, so only these hosts are accepted
+ * (no requests to arbitrary or internal URLs).
+ */
+const PUSH_HOSTS =
+  /^https:\/\/([a-z0-9-]+\.)*(fcm\.googleapis\.com|push\.services\.mozilla\.com|push\.apple\.com|notify\.windows\.com)\//;
+
+/** spec §14: `POST /push/subscriptions` and `DELETE /push/subscriptions` (endpoint only). */
+export const pushSubscriptionBody = z.object({
+  endpoint: z.url().max(1000).regex(PUSH_HOSTS, 'Not a push service.'),
+  keys: z.object({ p256dh: z.string().min(1).max(200), auth: z.string().min(1).max(100) }),
+});
+export const pushEndpointBody = pushSubscriptionBody.pick({ endpoint: true });

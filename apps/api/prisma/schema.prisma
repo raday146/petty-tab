@@ -17,6 +17,7 @@ model User {
   lastSeenAt DateTime  @default(now()) @map("last_seen_at") @db.Timestamptz
   sessions   Session[]
   members    Member[]
+  pushSubs   PushSub[]
 
   @@map("users")
 }
@@ -107,6 +108,8 @@ model Charge {
   createdAt  DateTime     @default(now()) @map("created_at") @db.Timestamptz
   pleadedAt  DateTime?    @map("pleaded_at") @db.Timestamptz
   resolvedAt DateTime?    @map("resolved_at") @db.Timestamptz
+  /// When the accused's push went out, alone or in a batch (spec §12); null until then.
+  pushedAt   DateTime?    @map("pushed_at") @db.Timestamptz
 
   @@index([pairId, weekStart])
   @@map("charges")
@@ -135,7 +138,23 @@ model Verdict {
   /// Storage keys of the rendered card PNG and reel MP4 for the current sentence (spec §11); null until rendered.
   cardUrl          String?   @map("card_url")
   reelUrl          String?   @map("reel_url")
+  /// The last Wednesday reminder sent to the loser (spec §12).
+  remindedAt       DateTime? @map("reminded_at") @db.Timestamptz
 
   @@unique([pairId, weekStart])
   @@map("verdicts")
+}
+
+/// spec §12: one Web Push subscription per device. A device that changes user moves over (unique endpoint).
+model PushSub {
+  id        String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  endpoint  String   @unique
+  /// { p256dh, auth } from PushSubscription.toJSON().keys
+  keys      Json
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  @@index([userId])
+  @@map("push_subs")
 }

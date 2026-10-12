@@ -7,6 +7,9 @@ export const QUEUES = {
   chargePush: 'charge-push',
   autoGuilty: 'auto-guilty',
   seal: 'seal',
+  // spec §12: one push to a member's devices, and the Wednesday sentence reminder sweep.
+  push: 'push',
+  reminder: 'reminder',
   // spec §11: the API queues renders for apps/renderer, which reports back on `rendered`.
   ...RENDER_QUEUES,
 } as const;

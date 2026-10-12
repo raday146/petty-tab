@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { chargePushText, pushText, reminderDue } from './notify.ts';
+import { chargePushText, pushSubscriptionBody, pushText, reminderDue } from './notify.ts';
 
 const at = (iso: string): Date => new Date(iso);
 
@@ -66,5 +66,31 @@ describe('reminderDue (spec §12: Wednesday 19:00 local)', () => {
   it('skips a Wednesday that came before the verdict was sealed', () => {
     const late = at('2026-10-21T17:00:00Z');
     expect(reminderDue(late, null, 'Asia/Jerusalem', at('2026-10-21T18:00:00Z'))).toBe(false);
+  });
+});
+
+describe('pushSubscriptionBody', () => {
+  const keys = { p256dh: 'BNc', auth: 'tBH' };
+  it('accepts the browser push services', () => {
+    for (const endpoint of [
+      'https://fcm.googleapis.com/fcm/send/abc',
+      'https://web.push.apple.com/QGx',
+      'https://updates.push.services.mozilla.com/wpush/v2/x',
+      'https://wns2-db5p.notify.windows.com/w/?token=x',
+    ]) {
+      expect(pushSubscriptionBody.safeParse({ endpoint, keys }).success).toBe(true);
+    }
+  });
+
+  it('refuses any other host, plain http and look-alikes', () => {
+    for (const endpoint of [
+      'http://fcm.googleapis.com/fcm/send/abc',
+      'https://localhost:3001/api/charges',
+      'https://169.254.169.254/latest',
+      'https://fcm.googleapis.com.evil.example/x',
+      'https://evilfcm.googleapis.com/x',
+    ]) {
+      expect(pushSubscriptionBody.safeParse({ endpoint, keys }).success).toBe(false);
+    }
   });
 });

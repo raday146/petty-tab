@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import {
   INVITE_TTL_MS,
   inviteStatus,
+  pushText,
   type acceptInviteBody,
   type createPairBody,
   type InvitePreview,
@@ -16,6 +17,7 @@ import { ApiError } from './errors.js';
 import { Events } from './events.js';
 import { Prisma } from './generated/prisma/client.js';
 import { PrismaService } from './prisma.service.js';
+import { PushService } from './push.service.js';
 
 /** The invite link path; the web prefixes its own origin (spec §4.2: `https://<host>/j/<token>`). */
 export interface InviteLink {
@@ -38,6 +40,7 @@ export class PairingService {
     private readonly prisma: PrismaService,
     private readonly clock: Clock,
     private readonly events: Events,
+    private readonly push: PushService,
   ) {}
 
   /** The user's member row in their active (not ended) pair, with both members. */
@@ -148,6 +151,13 @@ export class PairingService {
         return invite.pairId;
       });
       this.events.emit(pairId, 'member.joined');
+      const inviter = await this.prisma.member.findFirstOrThrow({
+        where: { pairId, userId: { not: userId } },
+      });
+      await this.push.notify(
+        inviter.id,
+        pushText({ type: 'joined', name: body.name, species: body.species }),
+      );
     } catch (e) {
       // unique (pair_id, species): the inviter's animal (the link stays usable, the transaction rolled back).
       if (isUniqueViolation(e)) throw speciesTaken();
