@@ -1,0 +1,35 @@
+/* M2 friendly pages, laid out like the intro (design.md §6) with a title in place of the wordmark. */
+.body {
+  position: absolute;
+  top: 128px;
+  left: 24px;
+  right: 24px;
+  text-align: center;
+}
+.title {
+  margin: 0;
+  font-weight: 800;
+  font-size: 30px;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+}
+.lead {
+  margin: 14px auto 0;
+  max-width: 280px;
+  font-size: 17px;
+  line-height: 1.4;
+  color: var(--mute);
+}
+.hero {
+  position: absolute;
+  left: 0;
+  top: 304px;
+  width: 390px;
+  height: 292px;
+}
+.cta {
+  position: absolute;
+  left: 24px;
+  right: 24px;
+  top: 628px;
+}

@@ -80,6 +80,7 @@ function OwedList({ member, owed, bump }: { member: Member; owed: Owed; bump?: P
         <bdi>{member.name}</bdi> is owed
       </p>
       <div className={s.pills}>
+        {owed.length === 0 && <span className={s.none}>nothing</span>}
         {owed.map(({ unit, count }) => (
           <Pill
             key={unit === bump?.unit ? `${unit}-${bump.n}` : unit}

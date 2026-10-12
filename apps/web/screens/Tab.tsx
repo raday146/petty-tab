@@ -5,6 +5,7 @@ import { CRIMES, CRIME_KEYS, type CrimeKey, type UnitKey } from '@petty-tab/shar
 import { Art } from '@/components/Art';
 import { AnimalSticker } from '@/components/AnimalSticker';
 import { Button } from '@/components/Button';
+import { NameChip } from '@/components/NameChip';
 import { nudge, Screen } from '@/components/Screen';
 import { Sheet } from '@/components/Sheet';
 import { Toast, useToast } from '@/components/Toast';
@@ -32,13 +33,15 @@ interface Props {
   themOwed: Owed;
   /** This week's charges, newest first. */
   charges: TabCharge[];
-  /** Files a charge against the partner; returns its id for Undo. */
-  onFile: (crime: CrimeKey) => string;
+  /** Files a charge against the partner; returns its id for Undo. Without it there is no FAB (M2: filing lands in M3). */
+  onFile?: (crime: CrimeKey) => string;
   onUndo: (id: string, crime: CrimeKey) => void;
   onPlea: (id: string, plea: 'guilty' | 'appeal') => void;
   onDecide: (id: string, decision: 'uphold' | 'drop') => void;
   onVerdict: () => void;
   onNewLink: () => void;
+  /** Opens the picker to change the viewer's name or animal (the name chip, top end). */
+  onEdit?: () => void;
 }
 
 const SLAM_MS = 1900;
@@ -65,7 +68,7 @@ export function Tab(props: Props): ReactNode {
     setLogOpen(false);
     sfx.paper();
     setTimeout(sfx.pop, 180);
-    const id = props.onFile(crime);
+    const id = props.onFile!(crime);
     setFresh(id);
     setBump((b) => ({ unit: CRIMES[crime].unit, n: (b?.n ?? 0) + 1 }));
     show({
@@ -106,6 +109,9 @@ export function Tab(props: Props): ReactNode {
     <Screen ref={screen} className={s.screen} aria-label="The tab">
       <Toast toast={toast} onHide={hide} />
       <div className={s.head}>
+        {props.onEdit && (
+          <NameChip className={s.me} name={me.name} species={me.species} onClick={props.onEdit} />
+        )}
         <div className={s.row}>
           <h1 className={s.title}>The Tab</h1>
           {firstVerdictDay ? (
@@ -177,17 +183,19 @@ export function Tab(props: Props): ReactNode {
                 />
               ))}
           </div>
-          <div className={s.fab}>
-            <Button
-              onClick={() => {
-                sfx.tap();
-                setLogOpen(true);
-              }}
-            >
-              <Art className={s.plus} draw={(art) => art.icon('plus')} />
-              Log a petty crime
-            </Button>
-          </div>
+          {props.onFile && (
+            <div className={s.fab}>
+              <Button
+                onClick={() => {
+                  sfx.tap();
+                  setLogOpen(true);
+                }}
+              >
+                <Art className={s.plus} draw={(art) => art.icon('plus')} />
+                Log a petty crime
+              </Button>
+            </div>
+          )}
           <Sheet
             open={logOpen}
             onClose={() => setLogOpen(false)}
