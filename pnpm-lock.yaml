@@ -266,7 +266,11 @@ importers:
 
   packages/art: {}
 
-  packages/reel: {}
+  packages/reel:
+    dependencies:
+      '@petty-tab/shared':
+        specifier: workspace:*
+        version: link:../shared
 
   packages/shared:
     dependencies:

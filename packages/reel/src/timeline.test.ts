@@ -24,12 +24,31 @@ describe('easing and keyframes (reel.md §4)', () => {
   });
 
   it('a key without an easing uses cubic in-out, not linear', () => {
-    expect(kf([[0, 0], [1, 1]], 0.25)).toBeCloseTo(EZ.io(0.25));
-    expect(kf([[0, 0], [1, 1, 'lin']], 0.25)).toBeCloseTo(0.25);
+    expect(
+      kf(
+        [
+          [0, 0],
+          [1, 1],
+        ],
+        0.25,
+      ),
+    ).toBeCloseTo(EZ.io(0.25));
+    expect(
+      kf(
+        [
+          [0, 0],
+          [1, 1, 'lin'],
+        ],
+        0.25,
+      ),
+    ).toBeCloseTo(0.25);
   });
 
   it('holds the first value before the first key and the last after the last', () => {
-    const keys = [[1, 5], [2, 9, 'lin']] as const;
+    const keys = [
+      [1, 5],
+      [2, 9, 'lin'],
+    ] as const;
     expect(kf([...keys], 0)).toBe(5);
     expect(kf([...keys], 3)).toBe(9);
   });
@@ -107,6 +126,15 @@ describe('heartbeat, shake and particles (reel.md §5–6)', () => {
     expect(DUST).toHaveLength(30);
     expect(CONFETTI).toHaveLength(110);
     expect(DUST.filter((p) => p.fleck).length).toBeGreaterThan(0);
-    expect(DUST[0]).toMatchInlineSnapshot();
+    expect(DUST[0]).toMatchInlineSnapshot(`
+      {
+        "fleck": false,
+        "r0": 26.543563889339566,
+        "vx": 552.0956541350603,
+        "vy": -66.7494551074669,
+        "x": 877.1407857536017,
+        "y": 913.1070614088065,
+      }
+    `);
   });
 });
