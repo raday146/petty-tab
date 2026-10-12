@@ -70,6 +70,8 @@ sheet, and the real link is `/j/<token>`.
    the link with **Share** and **Copy**, and **New link**) replaces the scoreboard, and logging is disabled.
 6. Either member can change their own name or animal later (the animal must stay unique in the pair).
 7. Either member can leave. Leaving ends the pair for both; its data is kept 30 days, then deleted.
+8. Either member can delete everything: every tab they were in (the partner's tab ends too) with its
+   verdicts and renders, and their anonymous identity on this device, at once and for good.
 
 Invalid, expired, revoked or used links show a friendly page with a way to start a new tab.
 
@@ -286,6 +288,7 @@ All endpoints are under `/api`, use the session cookie, and return JSON. Errors 
 
 ```
 GET    /me                               session, membership, pair summary
+DELETE /me                               delete everything (§4.8) and clear the session cookie
 POST   /pairs                            { name, species, timezone }  → { link: "/j/<token>" }
 GET    /pairs/invite                     current invite link while waiting (re-issued if expired)
 POST   /pairs/invite                     new invite link (revokes old)

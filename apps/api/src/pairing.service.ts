@@ -1,3 +1,5 @@
+import { rm } from 'node:fs/promises';
+import { join } from 'node:path';
 import { Injectable } from '@nestjs/common';
 import {
   INVITE_TTL_MS,
@@ -15,6 +17,7 @@ import { Clock } from './clock.js';
 import { decrypt, encrypt, newToken, sha256 } from './crypto.js';
 import { ApiError } from './errors.js';
 import { Events } from './events.js';
+import { STORAGE_DIR } from './files.controller.js';
 import { Prisma } from './generated/prisma/client.js';
 import { PrismaService } from './prisma.service.js';
 import { PushService } from './push.service.js';
@@ -30,6 +33,8 @@ const invalid = (): ApiError =>
 const alreadyInPair = (): ApiError => new ApiError(409, 'already_in_pair', 'You already have a tab.');
 const speciesTaken = (): ApiError =>
   new ApiError(409, 'species_taken', 'Your partner already picked that animal.');
+/** spec §4.7: how long an ended pair's data is kept. */
+export const KEEP_ENDED_MS = 30 * 24 * 60 * 60 * 1000;
 const isUniqueViolation = (e: unknown): boolean =>
   e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002';
 
@@ -193,6 +198,36 @@ export class PairingService {
       }),
     ]);
     this.events.emit(member.pairId, 'member.left');
+  }
+
+  /** spec §4.7: deletes pairs that ended 30 days ago or more, with their renders. Runs daily. */
+  async purge(only?: { pairId: string }): Promise<number> {
+    const before = new Date(this.clock.now().getTime() - KEEP_ENDED_MS);
+    return this.deletePairs({ id: only?.pairId, endedAt: { lte: before } });
+  }
+
+  /**
+   * "Delete everything": every pair the user was ever in, now (the partner's tab ends, `member.left`), then the
+   * user with their sessions and push subscriptions.
+   */
+  async deleteEverything(userId: string): Promise<void> {
+    const active = await this.activeMember(userId);
+    await this.deletePairs({ members: { some: { userId } } });
+    await this.prisma.user.delete({ where: { id: userId } });
+    if (active) this.events.emit(active.pairId, 'member.left');
+  }
+
+  /** Deletes the pairs (members, invites, charges and verdicts cascade) and their files on disk. */
+  private async deletePairs(where: Prisma.PairWhereInput): Promise<number> {
+    const pairs = await this.prisma.pair.findMany({
+      where,
+      select: { id: true, verdicts: { select: { id: true } } },
+    });
+    if (!pairs.length) return 0;
+    await this.prisma.pair.deleteMany({ where: { id: { in: pairs.map((p) => p.id) } } });
+    for (const v of pairs.flatMap((p) => p.verdicts))
+      await rm(join(STORAGE_DIR, 'verdicts', v.id), { recursive: true, force: true });
+    return pairs.length;
   }
 
   /** The caller's member row with the pair and both members; `not_in_pair` otherwise. */
