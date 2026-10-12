@@ -1,7 +1,8 @@
 import { expect, test } from '@playwright/test';
-import { path, person, pick, startTab } from './people';
+import { pair, path, person, pick, startTab } from './people';
 
 // plan.md M6: the one-time notifications offer (spec §12) and the sound setting (design.md §8).
+// plan.md M7: delete everything (spec §4.8).
 
 test('the notifications offer comes once the pair completes, and only once', async ({ browser }) => {
   const a = await person(browser, { asked: false });
@@ -41,4 +42,18 @@ test('sound and notifications live on the edit screen; sound is remembered', asy
   await a.getByRole('button', { name: 'Change your name or animal' }).click();
   await expect(sound).toHaveText('Sound: off');
   expect(await a.evaluate(() => localStorage.getItem('pt-sound'))).toBe('off');
+});
+
+test('delete everything ends the tab for both and starts this phone over', async ({ browser }) => {
+  const { a, b } = await pair(browser);
+  const cookie = async () => (await a.context().cookies()).find((c) => c.name === 'pt_session')?.value;
+  const before = await cookie();
+  await a.getByRole('button', { name: 'Change your name or animal' }).click();
+  await a.getByRole('button', { name: 'Delete everything' }).click();
+  await expect(a.getByText('Alex’s tab ends too.')).toBeVisible();
+  await a.getByRole('button', { name: 'Delete everything' }).click();
+  await expect(a.getByRole('button', { name: 'Start a tab' })).toBeVisible();
+  expect(await cookie()).not.toBe(before);
+  await b.reload();
+  await expect(b.getByRole('button', { name: 'Start a tab' })).toBeVisible();
 });
