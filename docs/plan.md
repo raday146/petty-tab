@@ -249,7 +249,7 @@ Notes from M4:
 - Screenshot ratios of the dev screens are unchanged from M1–M3.
 
 ## M5 · Shareables
-Status: in review (`feat/m5-shareables`); defaults and tolerances approved by the owner on 2026-10-12
+Status: done (PR #6, `feat/m5-shareables`, merged 2026-10-12); defaults and tolerances approved by the owner on 2026-10-12
 
 - `packages/reel`: the timeline from `reel.md` as data plus a React player with `seek(t)`, play, loop,
   hold-to-pause; used by the story preview screen.
@@ -304,7 +304,7 @@ Notes from M5:
   the full run.
 
 ## M6 · PWA and notifications
-Status: not started
+Status: in progress (`feat/m6-pwa-push`)
 
 - Web app manifest (name, theme colours, icons from the coffee-cup crown), service worker with an offline
   shell, an install hint (with the iPhone "Add to Home Screen" steps).
