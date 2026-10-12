@@ -12,7 +12,8 @@ const UUID = /^[0-9a-f-]{36}$/;
 
 /**
  * Serves renders behind the signed URLs of `GET /verdicts/:id/card|reel`; the signature is the authorisation.
- * ponytail: local disk; an S3-compatible bucket with presigned URLs replaces this at deployment (M7).
+ * ponytail: local disk (a volume shared with the renderer on the one server); a bucket with presigned URLs if
+ * the API ever runs on more than one machine.
  */
 @Controller('files/verdicts/:id/:name')
 export class FilesController {
