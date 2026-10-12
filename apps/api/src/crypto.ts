@@ -1,4 +1,11 @@
-import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'node:crypto';
+import {
+  createCipheriv,
+  createDecipheriv,
+  createHash,
+  createHmac,
+  randomBytes,
+  timingSafeEqual,
+} from 'node:crypto';
 
 /** 128 bits of randomness, URL-safe (session ids and invite tokens). */
 export const newToken = (): string => randomBytes(16).toString('base64url');
@@ -25,4 +32,28 @@ export function decrypt(stored: string): string {
   const decipher = createDecipheriv('aes-256-gcm', inviteKey(), raw.subarray(0, 12));
   decipher.setAuthTag(raw.subarray(12, 28));
   return Buffer.concat([decipher.update(raw.subarray(28)), decipher.final()]).toString('utf8');
+}
+
+/** How long a signed file URL works (spec §11: short-lived). */
+const FILE_URL_SECONDS = 300;
+
+function filesKey(): Buffer {
+  const key = Buffer.from(process.env.FILES_KEY ?? '', 'base64');
+  if (key.length !== 32) throw new Error('FILES_KEY must be 32 bytes, base64 (see .env.example)');
+  return key;
+}
+
+const fileSig = (key: string, exp: number): Buffer =>
+  createHmac('sha256', filesKey()).update(`${key}\n${exp}`).digest();
+
+/** A signed `/api/files/<key>` URL, valid for five minutes from `now`. */
+export function signedFileUrl(key: string, now: Date): string {
+  const exp = Math.floor(now.getTime() / 1000) + FILE_URL_SECONDS;
+  return `/api/files/${key}?exp=${exp}&sig=${fileSig(key, exp).toString('base64url')}`;
+}
+
+export function verifyFile(key: string, exp: number, sig: string, now: Date): boolean {
+  const given = Buffer.from(sig, 'base64url');
+  const want = fileSig(key, exp);
+  return given.length === want.length && timingSafeEqual(given, want) && now.getTime() < exp * 1000;
 }

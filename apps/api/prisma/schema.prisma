@@ -132,6 +132,9 @@ model Verdict {
   sentenceLockedAt DateTime? @map("sentence_locked_at") @db.Timestamptz
   servedAt         DateTime? @map("served_at") @db.Timestamptz
   confirmedAt      DateTime? @map("confirmed_at") @db.Timestamptz
+  /// Storage keys of the rendered card PNG and reel MP4 for the current sentence (spec §11); null until rendered.
+  cardUrl          String?   @map("card_url")
+  reelUrl          String?   @map("reel_url")
 
   @@unique([pairId, weekStart])
   @@map("verdicts")
