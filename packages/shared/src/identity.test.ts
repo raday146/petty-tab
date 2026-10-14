@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
+import { CRIME_KEYS } from './catalog.ts';
 import {
   INVITE_TTL_MS,
+  createPairBody,
+  rulesBody,
   inviteStatus,
   nameSchema,
   speciesSchema,
@@ -69,5 +72,30 @@ describe('inviteStatus (spec §4.2)', () => {
   });
   it('lasts 7 days', () => {
     expect(INVITE_TTL_MS).toBe(7 * 24 * 60 * 60 * 1000);
+  });
+});
+
+describe('rulesBody (spec §4: the game set up before the invite)', () => {
+  const ok = { cycleDays: 3, firstEnd: null, crimesOff: ['dj', 'movie'], custom: [] };
+  const chore = { title: 'Dishes duty', description: '', unit: 'dish', sticker: 'dish', chore: 'them' };
+  it('takes a cycle, a first deadline, crimes turned off and crimes of the pair’s own', () => {
+    expect(rulesBody.safeParse(ok).success).toBe(true);
+    expect(rulesBody.safeParse({ ...ok, cycleDays: null, firstEnd: '2026-10-16T18:00:00Z' }).success).toBe(
+      true,
+    );
+    expect(rulesBody.safeParse({ ...ok, custom: [chore] }).success).toBe(true);
+  });
+  it('refuses other cycle lengths and unknown crimes', () => {
+    expect(rulesBody.safeParse({ ...ok, cycleDays: 7 }).success).toBe(false);
+    expect(rulesBody.safeParse({ ...ok, crimesOff: ['nope'] }).success).toBe(false);
+  });
+  it('needs at least one crime in play', () => {
+    expect(rulesBody.safeParse({ ...ok, crimesOff: CRIME_KEYS }).success).toBe(false);
+    expect(rulesBody.safeParse({ ...ok, crimesOff: CRIME_KEYS, custom: [chore] }).success).toBe(true);
+  });
+  it('is optional when creating a pair (older clients get the defaults)', () => {
+    expect(
+      createPairBody.safeParse({ name: 'Maya', species: 'cat', timezone: 'Asia/Jerusalem' }).success,
+    ).toBe(true);
   });
 });
