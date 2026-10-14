@@ -60,6 +60,7 @@ export function Tab(props: Props): ReactNode {
   const { me, them, inviteLink, firstVerdictDay, charges } = props;
   const [logOpen, setLogOpen] = useState(false);
   const [tallyOpen, setTallyOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
   const [fresh, setFresh] = useState<string>();
   const [slam, setSlam] = useState<string>();
   const [bump, setBump] = useState<{ unit: UnitKey; n: number }>();
@@ -166,6 +167,9 @@ export function Tab(props: Props): ReactNode {
     <Screen ref={screen} className={s.screen} aria-label="The tab">
       <Toast toast={toast} onHide={hide} />
       <div className={s.head}>
+        <button type="button" className={s.help} aria-label="How it works" onClick={() => setHelpOpen(true)}>
+          ?
+        </button>
         {props.onEdit && (
           <NameChip className={s.me} name={me.name} species={me.species} onClick={props.onEdit} />
         )}
@@ -271,6 +275,23 @@ export function Tab(props: Props): ReactNode {
           </Sheet>
         </>
       )}
+      <Sheet open={helpOpen} onClose={() => setHelpOpen(false)} title="How it works">
+        <ol className={s.steps}>
+          <li>
+            <b>Log a slip-up.</b> Three drops of milk left in the carton? Log it. Every crime adds a coffee, a
+            dish load or a foot rub to what <bdi>{them.name}</bdi> owes you.
+          </li>
+          <li>
+            <b>Own it or dispute it.</b> The accused taps &ldquo;Fine, I did it&rdquo; or &ldquo;Not
+            me!&rdquo;. Disputed? The one who logged it makes the call. Silence for a day counts as owning it.
+          </li>
+          <li>
+            <b>Sunday verdict.</b> At 20:00 the week seals. Whoever was charged more is found guilty and owes
+            a sentence. Share the card, then start fresh at 0&ndash;0.
+          </li>
+        </ol>
+        <Button onClick={() => setHelpOpen(false)}>Got it</Button>
+      </Sheet>
     </Screen>
   );
 }

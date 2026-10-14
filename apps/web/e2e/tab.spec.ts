@@ -57,7 +57,7 @@ test('B cries foul, A sees the card live and says nice try; the charge counts ag
   await file(a, 'The Phantom Sip');
   await b.getByRole('button', { name: 'Not me!' }).click(live);
 
-  await expect(a.getByText('Alex cries foul.')).toBeVisible(live);
+  await expect(a.getByText('Alex is disputing this!')).toBeVisible(live);
   await expect(lead(a, 'Dead even')).toBeVisible();
   await shot(a, info, 'A: the cries-foul card');
   await a.getByRole('button', { name: 'Nice try' }).click();

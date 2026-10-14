@@ -162,7 +162,7 @@ pending ──plead guilty──▶ guilty
 | Charge state | The accused sees | The filer sees |
 | --- | --- | --- |
 | `pending` | A plea card: "<filer> says you did this." with **Fine, I did it** (guilty) / **Not me!** (appeal) | A row with the accused's `plain` face and the pill; no buttons |
-| `appealed` | A row with their own `smug` face; "Disputed" in place of the pill | A card: "<accused> cries foul." with **Nice try** (uphold) / **Let it slide** (drop) |
+| `appealed` | A row with their own `smug` face; "Disputed" in place of the pill | A card: "<accused> is disputing this! What's the call?" above **Nice try** (uphold) / **Let it slide** (drop) |
 | `guilty`, `upheld` | A row with their `sad` face and the pill | Same row |
 | `dropped` | A row with their `plain` face, the title muted, no pill | Same row |
 

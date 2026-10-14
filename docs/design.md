@@ -82,7 +82,7 @@ No italics anywhere. Uppercase is only for stamps and the reel's cold open.
 | Name chip | Paper pill, 42px tall, 30px sticker + name. Used on the intro (who you are). |
 | Crime row | Grid: 48px sticker · title (1fr) · pill. 12px vertical padding, no dividers, no meta text. |
 | Plea card | Shown to the accused only. Butter card: a crime row, then "<bdi>Maya</bdi> says you did this." with **Fine, I did it** (ink) and **Not me!** (outline) buttons, 40px tall. (The prototype's card reads "Alex pleads…" because it is drawn on the filer's phone; see spec §8.) |
-| Appeal card | Shown to the filer only. Same card as the plea card: the crime row, then "<bdi>Alex</bdi> cries foul." with **Nice try** (ink) and **Let it slide** (outline). Nice try slams GUILTY; Let it slide fades the row to its dropped state. |
+| Appeal card | Shown to the filer only. Same card as the plea card: the crime row, then "<bdi>Alex</bdi> is disputing this! What's the call?" on its own line above **Nice try** (ink) and **Let it slide** (outline). Nice try slams GUILTY; Let it slide fades the row to its dropped state. |
 | Scoreboard | Paper card, one tap target. My sticker and name · rope + "Maya leads by 5" · partner sticker and name; after a dashed line, "Who owes what" (13.5px, 600, mute). A tap opens the tally sheet: "Maya is owed" pills · "Alex is owed" pills. The lead line bumps when my score goes up. (Changed on 2026-10-14 after the phone test: the owed pills crowded a small phone; reference screens 06, 08–10 and 15 still show them.) |
 | Rope | 3px track at 16% ink, a centre tick, a 20px mustard marker with a 2.5px ink ring; moves with a springy 550ms ease. |
 | Animal card | Paper card: 120px tinted portrait panel (`art.portrait`), title, one-line bio. Selected: 3px mustard ring and a mustard check badge. Partner's animal: an ink chip with the partner's name. When the count is odd, the last card spans both columns with the portrait on the left. |
@@ -127,6 +127,9 @@ prototype's "Invite your partner" button and pre-filled name chip are placeholde
 ### The Tab (`06`–`10`, `15`)
 - Title "The Tab" and a paper chip "Verdict on Sunday" (gavel icon, knocks every few seconds) that opens the
   latest verdict. Before the first verdict it is a plain label, "First verdict Sunday 20:00", with no gavel knock.
+- A 40px paper "?" button at the top start (the name chip holds the top end) opens the **How it works** sheet:
+  three numbered steps (Log a slip-up · Own it or dispute it · Sunday verdict) and **Got it**. Also shown while
+  waiting for the partner.
 - Waiting state (pair not complete): the invite card replaces the scoreboard, no FAB.
 - Scoreboard (above). Faces react: the leader's sticker is `smug`, the trailing one `strain`, both `plain` when
   tied.

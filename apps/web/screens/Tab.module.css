@@ -158,3 +158,31 @@ button.chip:active {
   top: 16px;
   inset-inline-end: 20px;
 }
+
+/* Phone test (2026-10-14): a "?" at the top start opens How it works; the name chip holds the top end. */
+.help {
+  position: absolute;
+  top: 16px;
+  inset-inline-start: 20px;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--paper);
+  color: var(--ink);
+  font-weight: 700;
+  font-size: 18px;
+}
+.help:active {
+  transform: scale(0.95);
+}
+.steps {
+  margin: 14px 0 22px;
+  padding-inline-start: 22px;
+  list-style: decimal;
+  font-size: 15px;
+  line-height: 1.45;
+}
+.steps li + li {
+  margin-top: 12px;
+}
