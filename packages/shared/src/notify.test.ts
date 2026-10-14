@@ -6,15 +6,15 @@ const at = (iso: string): Date => new Date(iso);
 describe('pushText (spec §12, §10)', () => {
   it('words every event as the spec does', () => {
     expect(pushText({ type: 'joined', name: 'Alex', species: 'cat' })).toBe('Alex joined as the Judgy Cat.');
-    expect(pushText({ type: 'plea.guilty', name: 'Alex' })).toBe('Alex pleads guilty.');
+    expect(pushText({ type: 'plea.guilty', name: 'Alex' })).toBe('Alex owned it.');
     expect(pushText({ type: 'plea.appeal', name: 'Alex', crimeKey: 'trash' })).toBe(
-      'Alex appeals: Trash Jenga. Your call.',
+      'Alex cries foul: Trash Jenga. Your call.',
     );
-    expect(pushText({ type: 'appeal.upheld', name: 'Maya' })).toBe('Maya upheld it.');
-    expect(pushText({ type: 'appeal.dropped', name: 'Maya' })).toBe('Maya dropped it.');
-    expect(pushText({ type: 'verdict.won' })).toBe('Court is adjourned. You won the week.');
+    expect(pushText({ type: 'appeal.upheld', name: 'Maya' })).toBe('Maya says nice try. It counts.');
+    expect(pushText({ type: 'appeal.dropped', name: 'Maya' })).toBe('Maya let it slide.');
+    expect(pushText({ type: 'verdict.won' })).toBe('You won the week. Gloat responsibly.');
     expect(pushText({ type: 'verdict.lost' })).toBe('The verdict is in.');
-    expect(pushText({ type: 'verdict.tie' })).toBe('Dead even this week. The court is impressed.');
+    expect(pushText({ type: 'verdict.tie' })).toBe('Dead even this week. Suspiciously wholesome.');
     expect(pushText({ type: 'reminder', name: 'Maya', sentenceKey: 'coffee7' })).toBe(
       'You still owe Maya: 7 days of morning coffee duty.',
     );

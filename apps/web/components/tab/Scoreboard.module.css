@@ -1,5 +1,11 @@
-/* design.md §5 Scoreboard and Rope, prototype .score */
+/* design.md §5 Scoreboard and Rope, prototype .score. A button: it opens the tally sheet. */
 .score {
+  display: block;
+  width: 100%;
+  border: 0;
+  color: inherit;
+  text-align: inherit;
+  transition: transform 0.08s;
   margin-top: 20px;
   background: var(--paper);
   border-radius: 30px;
@@ -90,13 +96,32 @@
   line-height: 1.3;
   text-wrap: balance;
 }
+.score:active {
+  transform: scale(0.98);
+}
+.more {
+  display: block;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1.5px dashed var(--line);
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--mute);
+  text-align: center;
+}
+.bump {
+  animation: bump 0.45s cubic-bezier(0.2, 1.8, 0.4, 1);
+}
+@keyframes bump {
+  40% {
+    transform: scale(1.12);
+  }
+}
 .owed {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 16px;
   margin-top: 20px;
-  padding-top: 18px;
-  border-top: 1.5px dashed var(--line);
 }
 .owedLabel {
   margin: 0 0 9px;
@@ -113,6 +138,11 @@
   gap: 7px;
 }
 @media (prefers-reduced-motion: reduce) {
+  .score,
+  .bump {
+    transition: none;
+    animation: none;
+  }
   .marker {
     transition: none;
   }
