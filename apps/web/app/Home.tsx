@@ -5,7 +5,7 @@ import { ORDER, type Species } from '@petty-tab/art';
 import { reelInput } from '@petty-tab/reel';
 import {
   SENTENCES,
-  type CrimeKey,
+  type BreakdownView,
   type Me,
   type TabEvent,
   type TabView,
@@ -26,6 +26,7 @@ import {
 } from '@/lib/pwa';
 import { setSound, sfx, soundIsOn } from '@/lib/sfx';
 import { fetchRender, shareFile, whatsAppText } from '@/lib/share';
+import { Breakdown } from '@/screens/Breakdown';
 import { Intro } from '@/screens/Intro';
 import { Notice } from '@/screens/Notice';
 import { Sheet } from '@/components/Sheet';
@@ -131,6 +132,11 @@ function Pair({
     return api<VerdictView>(`/verdicts/${id}`).then(setVerdict, noop);
   }, []);
   const [story, setStory] = useState(false);
+  // The Breakdown screen: open (its data may still be loading) or closed.
+  const [breakdownOpen, setBreakdownOpen] = useState(false);
+  const [breakdown, setBreakdown] = useState<BreakdownView>();
+  const breakdownShown = useRef(false);
+  const loadBreakdown = useCallback(() => api<BreakdownView>('/breakdown').then(setBreakdown, noop), []);
   // spec §11: the rendered files of the open verdict's current sentence, fetched as soon as they are ready,
   // because the share sheet only opens from the tap itself.
   const [files, setFiles] = useState<{ of?: string; card?: File; reel?: File }>({});
@@ -162,6 +168,7 @@ function Pair({
       void refresh();
       void loadTab();
       if (verdictId.current) void loadVerdict(verdictId.current);
+      if (breakdownShown.current) void loadBreakdown();
     };
     events.onmessage = (m: MessageEvent<string>) => {
       sync();
@@ -170,12 +177,12 @@ function Pair({
     };
     events.onopen = sync;
     return () => events.close();
-  }, [refresh, loadTab, loadVerdict]);
+  }, [refresh, loadTab, loadVerdict, loadBreakdown]);
 
   /** The viewer's own writes refetch too, so the tab stays right even if the stream drops. */
   const write = (path: string, init?: { method?: string; body?: unknown }): void =>
     void api(path, init).then(loadTab, loadTab);
-  const file = async (crimeKey: CrimeKey): Promise<string> => {
+  const file = async (crimeKey: string): Promise<string> => {
     const { id } = await api<{ id: string }>('/charges', { body: { crimeKey } });
     void loadTab();
     return id;
@@ -227,6 +234,21 @@ function Pair({
       />
     );
   }
+  if (breakdownOpen && partner) {
+    return (
+      <Breakdown
+        view={breakdown}
+        me={member}
+        them={partner}
+        meOwed={tab?.meOwed ?? []}
+        themOwed={tab?.themOwed ?? []}
+        onBack={() => {
+          breakdownShown.current = false;
+          setBreakdownOpen(false);
+        }}
+      />
+    );
+  }
   if (editing) return <Edit me={me} onDone={() => refresh().then(() => setEditing(false))} />;
   return (
     <>
@@ -256,6 +278,15 @@ function Pair({
         unconfirmed={tab?.unconfirmed}
         onFile={partner ? file : undefined}
         onUndo={(id) => write(`/charges/${id}`, { method: 'DELETE' })}
+        custom={tab?.custom}
+        onBreakdown={() => {
+          breakdownShown.current = true;
+          setBreakdownOpen(true);
+          void loadBreakdown();
+        }}
+        onCreateCrime={(body) => api<{ id: string }>('/crimes', { body }).then(() => loadTab())}
+        onRemoveCrime={(id) => write(`/crimes/${id}`, { method: 'DELETE' })}
+        onChore={(id, done) => write(`/chores/${id}/done`, { method: done ? 'POST' : 'DELETE' })}
         onPlea={(id, plea) => write(`/charges/${id}/plea`, { body: { plea } })}
         onDecide={(id, decision) => write(`/charges/${id}/appeal`, { body: { decision } })}
         onVerdict={() => void loadVerdict('latest')}

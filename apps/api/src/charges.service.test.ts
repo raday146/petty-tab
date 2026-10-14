@@ -233,6 +233,7 @@ describe('/tab (spec §9)', () => {
         { id: dj, crime: 'dj', status: 'pending', filer: 'them' },
         { id: sip, crime: 'sip', status: 'pending', filer: 'me' },
       ],
+      custom: [],
       hasVerdict: false,
       deadline: { end: '2026-10-18T17:00:00.000Z', label: 'Sun 20:00' },
       proposal: null,

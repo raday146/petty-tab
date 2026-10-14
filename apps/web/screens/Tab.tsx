@@ -1,12 +1,13 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import {
-  CRIMES,
+  bookFor,
   CRIME_KEYS,
+  crimeInfo,
   SENTENCES,
   type ChargeStatus,
-  type CrimeKey,
+  type CustomCrimeInput,
   type TabCharge,
   type TabView,
   type UnitKey,
@@ -19,12 +20,13 @@ import { nudge, Screen } from '@/components/Screen';
 import { Sheet } from '@/components/Sheet';
 import { Toast, useToast } from '@/components/Toast';
 import { CourtCard, ProposalCard } from '@/components/tab/CourtCard';
-import { CrimeRow } from '@/components/tab/CrimeRow';
+import { Book, CrimeRow } from '@/components/tab/CrimeRow';
 import { CrimeTile } from '@/components/tab/CrimeTile';
+import { NewCrime } from '@/components/tab/NewCrime';
 import { Scoreboard, Tally, type Member, type Owed } from '@/components/tab/Scoreboard';
 import { ApiFailure } from '@/lib/api';
 import { cx } from '@/lib/cx';
-import { sfx } from '@/lib/sfx';
+import { buzz, sfx } from '@/lib/sfx';
 import { InviteLink } from './InviteSheet';
 import s from './Tab.module.css';
 
@@ -57,8 +59,16 @@ interface Props {
   /** Sentences still waiting for the winner's confirmation (spec §10). */
   unconfirmed?: TabView['unconfirmed'];
   /** Files a charge against the partner; resolves to its id for Undo. Without it there is no FAB (waiting). */
-  onFile?: (crime: CrimeKey) => string | Promise<string>;
-  onUndo: (id: string, crime: CrimeKey) => void;
+  onFile?: (crime: string) => string | Promise<string>;
+  onUndo: (id: string, crime: string) => void;
+  /** The pair's own crimes and chores (spec §6, §8). */
+  custom?: TabView['custom'];
+  onCreateCrime?: (body: CustomCrimeInput) => Promise<void>;
+  onRemoveCrime?: (id: string) => void;
+  /** Opens the Breakdown screen (a tap on the scoreboard); without it the tally sheet opens. */
+  onBreakdown?: () => void;
+  /** Ticks (or unticks) one of the viewer's chores for today. */
+  onChore?: (id: string, done: boolean) => void;
   onPlea: (id: string, plea: 'guilty' | 'appeal') => void;
   onDecide: (id: string, decision: 'uphold' | 'drop') => void;
   onVerdict: () => void;
@@ -102,6 +112,12 @@ export function Tab(props: Props): ReactNode {
   const [deadlineOpen, setDeadlineOpen] = useState(false);
   const [picked, setPicked] = useState('');
   const [logOpen, setLogOpen] = useState(false);
+  const [newOpen, setNewOpen] = useState(false);
+  const [editList, setEditList] = useState(false);
+  const custom = useMemo(() => props.custom ?? [], [props.custom]);
+  const book = useMemo(() => bookFor(custom), [custom]);
+  const active = custom.filter((c) => !c.removed);
+  const chores = active.filter((c) => c.chore);
   const [tallyOpen, setTallyOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const [fresh, setFresh] = useState<string>();
@@ -121,8 +137,13 @@ export function Tab(props: Props): ReactNode {
     setTimeout(() => setSlam((cur) => (cur === id ? undefined : cur)), SLAM_MS);
   }, []);
 
-  const bumpPill = (crime: CrimeKey): void =>
-    setBump((b) => ({ unit: CRIMES[crime].unit, n: (b?.n ?? 0) + 1 }));
+  const bumpPill = useCallback(
+    (crime: string): void => {
+      sfx.bump();
+      setBump((b) => ({ unit: crimeInfo(book, crime).unit, n: (b?.n ?? 0) + 1 }));
+    },
+    [book],
+  );
 
   // The partner's answers arrive as new statuses: the filer sees a guilty plea stamp and the pill bump,
   // the accused sees an upheld appeal stamp. The viewer's own pleas and decisions stamp where they happen.
@@ -138,7 +159,7 @@ export function Tab(props: Props): ReactNode {
       }
       if (c.filer === 'them' && was === 'appealed' && c.status === 'upheld') stamp(c.id);
     }
-  }, [charges, stamp]);
+  }, [charges, stamp, bumpPill]);
 
   // design.md §5: the filing toast disappears early once the accused pleads.
   useEffect(() => {
@@ -146,8 +167,9 @@ export function Tab(props: Props): ReactNode {
     if (c && c.status !== 'pending') hide();
   }, [charges, undoable, hide]);
 
-  const file = async (crime: CrimeKey): Promise<void> => {
+  const file = async (crime: string): Promise<void> => {
     setLogOpen(false);
+    buzz(10);
     sfx.paper();
     setTimeout(sfx.pop, 180);
     let id: string;
@@ -168,8 +190,8 @@ export function Tab(props: Props): ReactNode {
     bumpPill(crime);
     setUndoable(id);
     show({
-      title: CRIMES[crime].title,
-      message: CRIMES[crime].description,
+      title: crimeInfo(book, crime).title,
+      message: crimeInfo(book, crime).description,
       onUndo: () => props.onUndo(id, crime),
     });
   };
@@ -224,232 +246,333 @@ export function Tab(props: Props): ReactNode {
     (c.status === 'pending' && c.filer === 'them') || (c.status === 'appealed' && c.filer === 'me');
 
   return (
-    <Screen ref={screen} className={s.screen} aria-label="The tab">
-      <Toast toast={toast} onHide={hide} />
-      <div className={s.head}>
-        <button type="button" className={s.help} aria-label="How it works" onClick={() => setHelpOpen(true)}>
-          ?
-        </button>
-        {props.onEdit && (
-          <NameChip className={s.me} name={me.name} species={me.species} onClick={props.onEdit} />
-        )}
-        <div className={s.row}>
-          <h1 className={s.title}>The Tab</h1>
-          {props.firstVerdict && !props.onPropose ? (
-            <span className={`${s.chip} ${s.label}`}>
-              First verdict {DAYS[day]} {time}
-            </span>
-          ) : (
-            <button
-              type="button"
-              className={cx(s.chip, props.firstVerdict && s.label)}
-              aria-haspopup={props.onPropose ? 'dialog' : undefined}
-              onClick={props.onPropose ? () => setDeadlineOpen(true) : props.onVerdict}
-            >
-              {props.firstVerdict ? (
-                `First verdict ${DAYS[day]} ${time}`
-              ) : (
-                <>
-                  <Art className={s.gavel} draw={(art) => art.icon('gavel')} />
-                  Verdict on {DAYS[day]}
-                </>
-              )}
-            </button>
-          )}
-        </div>
-        {inviteLink ? (
-          <section className={s.invite} aria-label="Invite your partner">
-            <AnimalSticker species={me.species} size={70} />
-            <h2 className={s.inviteTitle}>Waiting for your partner</h2>
-            <p className={s.inviteLead}>Send this link to your partner.</p>
-            <InviteLink link={inviteLink} />
-            <button type="button" className={s.newLink} onClick={props.onNewLink}>
-              New link
-            </button>
-          </section>
-        ) : (
-          <Scoreboard me={me} them={them} lead={props.lead} bump={bump} onOpen={() => setTallyOpen(true)} />
-        )}
-        {props.unconfirmed?.map((u, i) => (
-          <p key={i} className={s.owes}>
-            <bdi>{u.loser}</bdi> still owes <bdi>{u.winner}</bdi>: {SENTENCES[u.sentence].title}
-          </p>
-        ))}
-      </div>
-      {!inviteLink && (
-        <>
-          <div className={s.feed}>
-            {proposal && (
-              <ProposalCard
-                proposal={proposal}
-                them={them}
-                deadline={props.deadline ?? ''}
-                onAnswer={(yes) => props.onAnswer?.(yes)}
-                onWithdraw={() => props.onWithdraw?.()}
-              />
-            )}
-            {charges
-              .filter(isCard)
-              .map((c) =>
-                c.filer === 'them' ? (
-                  <CourtCard
-                    key={c.id}
-                    kind="plea"
-                    charge={c}
-                    accused={me}
-                    filer={them}
-                    onGuilty={() => plead(c.id, 'guilty')}
-                    onAppeal={() => plead(c.id, 'appeal')}
-                  />
-                ) : (
-                  <CourtCard
-                    key={c.id}
-                    kind="appeal"
-                    charge={c}
-                    accused={them}
-                    onUphold={() => decide(c.id, 'uphold')}
-                    onDrop={() => decide(c.id, 'drop')}
-                  />
-                ),
-              )}
-            {charges
-              .filter((c) => !isCard(c))
-              .map((c) => (
-                <CrimeRow
-                  key={c.id}
-                  charge={c}
-                  accused={accused(c)}
-                  isNew={c.id === fresh}
-                  slam={c.id === slam}
-                />
-              ))}
-          </div>
-          {props.onFile && (
-            <div className={s.fab}>
-              <Button
-                onClick={() => {
-                  sfx.tap();
-                  setLogOpen(true);
-                }}
-              >
-                <Art className={s.plus} draw={(art) => art.icon('plus')} />
-                Log a petty crime
-              </Button>
-            </div>
-          )}
-          <Sheet
-            open={deadlineOpen}
-            onClose={() => setDeadlineOpen(false)}
-            title={`Verdict ${DAYS[day]} ${time}`}
-            lead={
-              proposal ? (
-                proposal.mine ? (
-                  <>
-                    Waiting for <bdi>{them.name}</bdi> to answer.
-                  </>
-                ) : (
-                  <>
-                    <bdi>{them.name}</bdi> has a proposal for you on the tab.
-                  </>
-                )
-              ) : (
-                <>
-                  Change it only if <bdi>{them.name}</bdi> agrees.
-                </>
-              )
-            }
+    <Book.Provider value={book}>
+      <Screen ref={screen} className={s.screen} aria-label="The tab">
+        <Toast toast={toast} onHide={hide} />
+        <div className={s.head}>
+          <button
+            type="button"
+            className={s.help}
+            aria-label="How it works"
+            onClick={() => setHelpOpen(true)}
           >
-            {!proposal && (
-              <div className={s.when}>
-                <Button onClick={() => propose(null)}>Settle now</Button>
-                <p>Or move it:</p>
-                <div className={s.quick}>
-                  {quickDeadlines(new Date()).map((q) => (
-                    <button key={q.label} type="button" onClick={() => propose(q.end.toISOString())}>
-                      {q.label}
-                    </button>
-                  ))}
-                </div>
-                <form
-                  className={s.pick}
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    if (picked) propose(new Date(picked).toISOString());
-                  }}
-                >
-                  <input
-                    type="datetime-local"
-                    aria-label="Pick a time"
-                    required
-                    value={picked}
-                    onChange={(e) => setPicked(e.target.value)}
-                  />
-                  <button type="submit">Propose</button>
-                </form>
-              </div>
-            )}
-            {proposal?.mine && (
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setDeadlineOpen(false);
-                  props.onWithdraw?.();
-                }}
-              >
-                Take it back
-              </Button>
-            )}
-            {props.hasVerdict && (
+            ?
+          </button>
+          {props.onEdit && (
+            <NameChip className={s.me} name={me.name} species={me.species} onClick={props.onEdit} />
+          )}
+          <div className={s.row}>
+            <h1 className={s.title}>The Tab</h1>
+            {props.firstVerdict && !props.onPropose ? (
+              <span className={`${s.chip} ${s.label}`}>
+                First verdict {DAYS[day]} {time}
+              </span>
+            ) : (
               <button
                 type="button"
-                className={s.last}
-                onClick={() => {
-                  setDeadlineOpen(false);
-                  props.onVerdict();
-                }}
+                className={cx(s.chip, props.firstVerdict && s.label)}
+                aria-haspopup={props.onPropose ? 'dialog' : undefined}
+                onClick={props.onPropose ? () => setDeadlineOpen(true) : props.onVerdict}
               >
-                See the last verdict
+                {props.firstVerdict ? (
+                  `First verdict ${DAYS[day]} ${time}`
+                ) : (
+                  <>
+                    <Art className={s.gavel} draw={(art) => art.icon('gavel')} />
+                    Verdict on {DAYS[day]}
+                  </>
+                )}
               </button>
             )}
-          </Sheet>
-          <Sheet open={tallyOpen} onClose={() => setTallyOpen(false)} title="Who owes what">
-            <Tally me={me} them={them} meOwed={props.meOwed} themOwed={props.themOwed} bump={bump} />
-          </Sheet>
-          <Sheet
-            open={logOpen}
-            onClose={() => setLogOpen(false)}
-            title={
-              <>
-                What did <bdi>{them.name}</bdi> do?
-              </>
-            }
-          >
-            <div className={s.picks}>
-              {CRIME_KEYS.map((k) => (
-                <CrimeTile key={k} crime={k} onPick={(crime) => void file(crime)} />
-              ))}
+          </div>
+          {inviteLink ? (
+            <section className={s.invite} aria-label="Invite your partner">
+              <AnimalSticker species={me.species} size={70} />
+              <h2 className={s.inviteTitle}>Waiting for your partner</h2>
+              <p className={s.inviteLead}>Send this link to your partner.</p>
+              <InviteLink link={inviteLink} />
+              <button type="button" className={s.newLink} onClick={props.onNewLink}>
+                New link
+              </button>
+            </section>
+          ) : (
+            <Scoreboard
+              me={me}
+              them={them}
+              lead={props.lead}
+              bump={bump}
+              onOpen={props.onBreakdown ?? (() => setTallyOpen(true))}
+            />
+          )}
+          {!inviteLink && chores.length > 0 && (
+            <ul className={s.chores} aria-label="Today's chores">
+              {chores.map((c) =>
+                c.chore!.owner === 'me' ? (
+                  <li key={c.id}>
+                    <button
+                      type="button"
+                      aria-pressed={c.chore!.doneToday}
+                      onClick={() => {
+                        if (!c.chore!.doneToday) sfx.pop();
+                        props.onChore?.(c.id, !c.chore!.doneToday);
+                      }}
+                    >
+                      <span className={s.tick} aria-hidden="true">
+                        {c.chore!.doneToday ? '✓' : ''}
+                      </span>
+                      {c.title}
+                      <small>{c.chore!.doneToday ? 'Done today' : 'Tap when done'}</small>
+                    </button>
+                  </li>
+                ) : (
+                  <li key={c.id} className={s.theirs}>
+                    <span className={s.tick} aria-hidden="true">
+                      {c.chore!.doneToday ? '✓' : ''}
+                    </span>
+                    <span>
+                      <bdi>{them.name}</bdi>: {c.title}
+                    </span>
+                    <small>{c.chore!.doneToday ? 'Done today' : 'Not yet'}</small>
+                  </li>
+                ),
+              )}
+            </ul>
+          )}
+          {props.unconfirmed?.map((u, i) => (
+            <p key={i} className={s.owes}>
+              <bdi>{u.loser}</bdi> still owes <bdi>{u.winner}</bdi>: {SENTENCES[u.sentence].title}
+            </p>
+          ))}
+        </div>
+        {!inviteLink && (
+          <>
+            <div className={s.feed}>
+              {proposal && (
+                <ProposalCard
+                  proposal={proposal}
+                  them={them}
+                  deadline={props.deadline ?? ''}
+                  onAnswer={(yes) => props.onAnswer?.(yes)}
+                  onWithdraw={() => props.onWithdraw?.()}
+                />
+              )}
+              {charges
+                .filter(isCard)
+                .map((c) =>
+                  c.filer === 'them' ? (
+                    <CourtCard
+                      key={c.id}
+                      kind="plea"
+                      charge={c}
+                      accused={me}
+                      filer={them}
+                      onGuilty={() => plead(c.id, 'guilty')}
+                      onAppeal={() => plead(c.id, 'appeal')}
+                    />
+                  ) : (
+                    <CourtCard
+                      key={c.id}
+                      kind="appeal"
+                      charge={c}
+                      accused={them}
+                      onUphold={() => decide(c.id, 'uphold')}
+                      onDrop={() => decide(c.id, 'drop')}
+                    />
+                  ),
+                )}
+              {charges
+                .filter((c) => !isCard(c))
+                .map((c) => (
+                  <CrimeRow
+                    key={c.id}
+                    charge={c}
+                    accused={accused(c)}
+                    isNew={c.id === fresh}
+                    slam={c.id === slam}
+                  />
+                ))}
             </div>
-          </Sheet>
-        </>
-      )}
-      <Sheet open={helpOpen} onClose={() => setHelpOpen(false)} title="How it works">
-        <ol className={s.steps}>
-          <li>
-            <b>Log a slip-up.</b> Three drops of milk left in the carton? Log it. Every crime adds a coffee, a
-            dish load or a foot rub to what <bdi>{them.name}</bdi> owes you.
-          </li>
-          <li>
-            <b>Own it or dispute it.</b> The accused taps &ldquo;Fine, I did it&rdquo; or &ldquo;Not
-            me!&rdquo;. Disputed? The one who logged it makes the call. Silence for a day counts as owning it.
-          </li>
-          <li>
-            <b>Verdict day.</b> Sunday at 20:00, or sooner if you both tap Settle now, the week seals. Whoever
-            was charged more is found guilty and owes a sentence. Share the card, then start fresh at
-            0&ndash;0.
-          </li>
-        </ol>
-        <Button onClick={() => setHelpOpen(false)}>Got it</Button>
-      </Sheet>
-    </Screen>
+            {props.onFile && (
+              <div className={s.fab}>
+                <Button
+                  onClick={() => {
+                    sfx.tap();
+                    setLogOpen(true);
+                  }}
+                >
+                  <Art className={s.plus} draw={(art) => art.icon('plus')} />
+                  Log a petty crime
+                </Button>
+              </div>
+            )}
+            <Sheet
+              open={deadlineOpen}
+              onClose={() => setDeadlineOpen(false)}
+              title={`Verdict ${DAYS[day]} ${time}`}
+              lead={
+                proposal ? (
+                  proposal.mine ? (
+                    <>
+                      Waiting for <bdi>{them.name}</bdi> to answer.
+                    </>
+                  ) : (
+                    <>
+                      <bdi>{them.name}</bdi> has a proposal for you on the tab.
+                    </>
+                  )
+                ) : (
+                  <>
+                    Change it only if <bdi>{them.name}</bdi> agrees.
+                  </>
+                )
+              }
+            >
+              {!proposal && (
+                <div className={s.when}>
+                  <Button onClick={() => propose(null)}>Settle now</Button>
+                  <p>Or move it:</p>
+                  <div className={s.quick}>
+                    {quickDeadlines(new Date()).map((q) => (
+                      <button key={q.label} type="button" onClick={() => propose(q.end.toISOString())}>
+                        {q.label}
+                      </button>
+                    ))}
+                  </div>
+                  <form
+                    className={s.pick}
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      if (picked) propose(new Date(picked).toISOString());
+                    }}
+                  >
+                    <input
+                      type="datetime-local"
+                      aria-label="Pick a time"
+                      required
+                      value={picked}
+                      onChange={(e) => setPicked(e.target.value)}
+                    />
+                    <button type="submit">Propose</button>
+                  </form>
+                </div>
+              )}
+              {proposal?.mine && (
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setDeadlineOpen(false);
+                    props.onWithdraw?.();
+                  }}
+                >
+                  Take it back
+                </Button>
+              )}
+              {props.hasVerdict && (
+                <button
+                  type="button"
+                  className={s.last}
+                  onClick={() => {
+                    setDeadlineOpen(false);
+                    props.onVerdict();
+                  }}
+                >
+                  See the last verdict
+                </button>
+              )}
+            </Sheet>
+            <Sheet open={tallyOpen} onClose={() => setTallyOpen(false)} title="Who owes what">
+              <Tally me={me} them={them} meOwed={props.meOwed} themOwed={props.themOwed} bump={bump} />
+            </Sheet>
+            <Sheet
+              open={logOpen}
+              onClose={() => setLogOpen(false)}
+              title={
+                <>
+                  What did <bdi>{them.name}</bdi> do?
+                </>
+              }
+            >
+              {editList ? (
+                <ul className={s.ownList}>
+                  {active.map((c) => (
+                    <li key={c.id}>
+                      <span>
+                        {c.title}
+                        {c.chore && <small> · daily chore</small>}
+                      </span>
+                      <button type="button" onClick={() => props.onRemoveCrime?.(c.id)}>
+                        Remove
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <div className={s.picks}>
+                  {active.map((c) => (
+                    <CrimeTile key={c.id} crime={`custom:${c.id}`} onPick={(crime) => void file(crime)} />
+                  ))}
+                  {CRIME_KEYS.map((k) => (
+                    <CrimeTile key={k} crime={k} onPick={(crime) => void file(crime)} />
+                  ))}
+                </div>
+              )}
+              {props.onCreateCrime && (
+                <div className={s.own}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setLogOpen(false);
+                      setNewOpen(true);
+                    }}
+                  >
+                    + New crime or chore
+                  </button>
+                  {active.length > 0 && (
+                    <button type="button" onClick={() => setEditList(!editList)}>
+                      {editList ? 'Done' : 'Edit your list'}
+                    </button>
+                  )}
+                </div>
+              )}
+            </Sheet>
+            <Sheet open={newOpen} onClose={() => setNewOpen(false)} title="A crime of your own">
+              {newOpen && (
+                <NewCrime
+                  them={them.name}
+                  onCreate={(body) =>
+                    props.onCreateCrime!(body).then(
+                      () => {
+                        setNewOpen(false);
+                        show({ title: 'Added', message: `${body.title.trim()} is on the list.` });
+                      },
+                      () => show({ title: 'Not added', message: 'Keep it to 30. Remove one first.' }),
+                    )
+                  }
+                />
+              )}
+            </Sheet>
+          </>
+        )}
+        <Sheet open={helpOpen} onClose={() => setHelpOpen(false)} title="How it works">
+          <ol className={s.steps}>
+            <li>
+              <b>Log a slip-up.</b> Three drops of milk left in the carton? Log it. Every crime adds a coffee,
+              a dish load or a foot rub to what <bdi>{them.name}</bdi> owes you.
+            </li>
+            <li>
+              <b>Own it or dispute it.</b> The accused taps &ldquo;Fine, I did it&rdquo; or &ldquo;Not
+              me!&rdquo;. Disputed? The one who logged it makes the call. Silence for a day counts as owning
+              it.
+            </li>
+            <li>
+              <b>Verdict day.</b> Sunday at 20:00, or sooner if you both tap Settle now, the week seals.
+              Whoever was charged more is found guilty and owes a sentence. Share the card, then start fresh
+              at 0&ndash;0.
+            </li>
+          </ol>
+          <Button onClick={() => setHelpOpen(false)}>Got it</Button>
+        </Sheet>
+      </Screen>
+    </Book.Provider>
   );
 }

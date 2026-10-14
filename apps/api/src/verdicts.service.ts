@@ -8,7 +8,6 @@ import {
   seedSentence,
   sentenceDeadline,
   sentenceLocked,
-  type CrimeKey,
   type EventType,
   type RenderedJob,
   type RenderJob,
@@ -20,6 +19,7 @@ import {
   type VerdictView,
 } from '@petty-tab/shared';
 import { z } from 'zod';
+import { loadBook } from './book.js';
 import { currentCycle } from './charges.service.js';
 import { Clock } from './clock.js';
 import { signedFileUrl } from './crypto.js';
@@ -146,8 +146,9 @@ export class VerdictsService implements OnModuleInit {
       });
       const charges = await tx.charge.findMany({ where });
       const v = judge(
-        charges.map((c) => ({ ...c, crime: c.crimeKey as CrimeKey })),
+        charges.map((c) => ({ ...c, crime: c.crimeKey })),
         [members[0].id, members[1].id],
+        await loadBook(tx, pairId),
       );
       const side = (memberId: string, points: number) => {
         const m = memberId === members[0].id ? members[0] : members[1];

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { Species } from '@petty-tab/art';
-import { CRIME_KEYS, type ChargeStatus, type CrimeKey, type SentenceKey } from './catalog.ts';
+import { CRIME_KEYS, type ChargeStatus, type CrimeInfo, type CrimeKey, type SentenceKey } from './catalog.ts';
 import type { Owed } from './score.ts';
 
 /** spec §8: the filer can undo for 10 seconds. */
@@ -39,7 +39,13 @@ export function canUndo(status: ChargeStatus, ageMs: number): 'already_pleaded' 
   return ageMs < UNDO_MS ? null : 'undo_expired';
 }
 
-export const fileChargeBody = z.object({ crimeKey: z.enum(CRIME_KEYS as [CrimeKey, ...CrimeKey[]]) });
+/** A catalog key, or `custom:<id>` of one of the pair's own crimes (checked against the pair by the API). */
+export const fileChargeBody = z.object({
+  crimeKey: z.union([
+    z.enum(CRIME_KEYS as [CrimeKey, ...CrimeKey[]]),
+    z.templateLiteral(['custom:', z.uuid()]),
+  ]),
+});
 export const pleaBody = z.object({ plea: z.enum(['guilty', 'appeal']) });
 export const appealBody = z.object({ decision: z.enum(['uphold', 'drop']) });
 /** spec §10: `POST /deadline/proposal`. A new deadline for the current cycle, or null to settle now. */
@@ -48,9 +54,17 @@ export const proposalBody = z.object({ end: z.iso.datetime({ offset: true }).nul
 /** One charge as the viewer sees it. */
 export interface TabCharge {
   id: string;
-  crime: CrimeKey;
+  /** A catalog key or `custom:<id>`; look it up in the tab's book (`bookFor(tab.custom)`). */
+  crime: string;
   status: ChargeStatus;
   filer: 'me' | 'them';
+}
+
+/** One of the pair's own crimes, from the viewer's side. A chore names whose it is and today's tick. */
+export interface CustomCrimeView extends CrimeInfo {
+  id: string;
+  removed: boolean;
+  chore: { owner: 'me' | 'them'; doneToday: boolean } | null;
 }
 
 /** `GET /api/tab`: the current week from the viewer's side, charges newest first. */
@@ -61,6 +75,8 @@ export interface TabView {
   meOwed: Owed;
   themOwed: Owed;
   charges: TabCharge[];
+  /** The pair's own crimes (spec §6); removed ones stay so old charges keep their title, out of the picker. */
+  custom: CustomCrimeView[];
   /** A sealed verdict exists, so the deadline sheet offers it (spec §10). */
   hasVerdict: boolean;
   /** The current cycle's end (ISO) and the same in the pair's timezone, "Sun 20:00" (spec §10). */
@@ -86,7 +102,9 @@ export type EventType =
   | 'verdict.settled'
   | 'verdict.updated'
   | 'deadline.proposed'
-  | 'deadline.decided';
+  | 'deadline.decided'
+  | 'crimes.updated'
+  | 'chore.updated';
 
 export interface TabEvent {
   type: EventType;

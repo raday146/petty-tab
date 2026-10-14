@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { SPECIES, type Species } from '@petty-tab/art';
-import { CRIMES, SENTENCES, type CrimeKey, type SentenceKey } from './catalog.ts';
+import { CRIMES, crimeInfo, SENTENCES, type CrimeBook, type SentenceKey } from './catalog.ts';
 import { reminderTime } from './week.ts';
 
 /** spec §12: charge pushes to the same person within this window go out as one. */
@@ -9,11 +9,12 @@ export const PUSH_BATCH_MS = 2 * 60 * 1000;
 export type PushEvent =
   | { type: 'joined'; name: string; species: Species }
   | { type: 'plea.guilty'; name: string }
-  | { type: 'plea.appeal'; name: string; crimeKey: CrimeKey }
+  | { type: 'plea.appeal'; name: string; title: string }
   | { type: 'appeal.upheld' | 'appeal.dropped'; name: string }
   | { type: 'verdict.won' | 'verdict.lost' | 'verdict.tie' }
   | { type: 'reminder'; name: string; sentenceKey: SentenceKey }
   | { type: 'settle.proposed'; name: string }
+  | { type: 'chore.neglected'; title: string }
   | { type: 'move.proposed' | 'move.accepted'; name: string; when: string }
   | { type: 'proposal.declined'; name: string; settle: boolean };
 
@@ -25,7 +26,7 @@ export function pushText(e: PushEvent): string {
     case 'plea.guilty':
       return `${e.name} owned it.`;
     case 'plea.appeal':
-      return `${e.name} cries foul: ${CRIMES[e.crimeKey].title}. Your call.`;
+      return `${e.name} cries foul: ${e.title}. Your call.`;
     case 'appeal.upheld':
       return `${e.name} says nice try. It counts.`;
     case 'appeal.dropped':
@@ -39,6 +40,8 @@ export function pushText(e: PushEvent): string {
     case 'reminder':
       // Default wording (spec §12 gives none), flagged in plan.md M6.
       return `You still owe ${e.name}: ${SENTENCES[e.sentenceKey].title}.`;
+    case 'chore.neglected':
+      return `${e.title} didn't happen yesterday. It's on the tab.`;
     case 'settle.proposed':
       return `${e.name} wants to settle the tab right now! Ready to face the verdict?`;
     case 'move.proposed':
@@ -51,8 +54,8 @@ export function pushText(e: PushEvent): string {
 }
 
 /** spec §12: one charge, or the charges batched into one push (the batch wording is an M6 default). */
-export function chargePushText(filer: string, crimes: CrimeKey[]): string {
-  const titles = crimes.map((k) => CRIMES[k].title);
+export function chargePushText(filer: string, crimes: string[], book: CrimeBook = CRIMES): string {
+  const titles = crimes.map((k) => crimeInfo(book, k).title);
   if (titles.length === 1) return `${filer} filed: ${titles[0]}.`;
   const named =
     titles.length === 2

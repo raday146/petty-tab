@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { ChargeStatus, CrimeKey } from './catalog.ts';
 import { SENTENCE_KEYS } from './catalog.ts';
-import { judge, seedSentence, sentenceLocked } from './verdict.ts';
+import { bookFor } from './catalog.ts';
+import { judge, renderInput, seedSentence, sentenceLocked } from './verdict.ts';
 
 const MAYA = 'maya';
 const ALEX = 'alex';
@@ -54,6 +55,46 @@ describe('judge (spec §10)', () => {
       { crime: 'dish', count: 1 },
       { crime: 'dj', count: 1 },
     ]);
+  });
+});
+
+describe('judge with custom crimes', () => {
+  it('keeps the title and sticker of a custom top crime, so removing it later changes nothing', () => {
+    const book = bookFor([
+      { id: 'tp', title: 'Toilet paper roulette', description: '', sticker: 'roll', unit: 'dish' },
+    ]);
+    const v = judge(
+      [
+        { filerId: MAYA, crime: 'custom:tp', status: 'guilty', createdAt: new Date(1) },
+        { filerId: MAYA, crime: 'sip', status: 'guilty', createdAt: new Date(2) },
+      ],
+      [MAYA, ALEX],
+      book,
+    );
+    expect(v.topCrimes).toEqual([
+      { crime: 'sip', count: 1 },
+      { crime: 'custom:tp', count: 1, title: 'Toilet paper roulette', sticker: 'roll' },
+    ]);
+  });
+});
+
+describe('renderInput', () => {
+  const base = {
+    winner: { name: 'Maya', species: 'cat' },
+    loser: { name: 'Alex', species: 'bear' },
+    tie: false,
+    sentence: 'coffee7',
+  };
+  it('takes catalog keys alone, and custom crimes only with a title and a sticker', () => {
+    expect(renderInput.safeParse({ ...base, topCrimes: [{ crime: 'sip', count: 1 }] }).success).toBe(true);
+    const custom = { crime: 'custom:tp', count: 1, title: 'Toilet paper roulette', sticker: 'roll' };
+    expect(renderInput.safeParse({ ...base, topCrimes: [custom] }).success).toBe(true);
+    expect(renderInput.safeParse({ ...base, topCrimes: [{ crime: 'custom:tp', count: 1 }] }).success).toBe(
+      false,
+    );
+    expect(renderInput.safeParse({ ...base, topCrimes: [{ ...custom, sticker: 'cat' }] }).success).toBe(
+      false,
+    );
   });
 });
 

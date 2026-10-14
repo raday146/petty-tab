@@ -1,5 +1,7 @@
 import { Module, type MiddlewareConsumer, type NestModule } from '@nestjs/common';
 import { ChargesController } from './charges.controller.js';
+import { CrimesController } from './crimes.controller.js';
+import { CrimesService } from './crimes.service.js';
 import { DeadlineController } from './deadline.controller.js';
 import { DeadlineService } from './deadline.service.js';
 import { ChargesService } from './charges.service.js';
@@ -28,6 +30,7 @@ const dev = process.env.E2E_HOOKS === '1' ? [DevController] : [];
     HealthController,
     PairingController,
     ChargesController,
+    CrimesController,
     DeadlineController,
     VerdictsController,
     EventsController,
@@ -45,6 +48,7 @@ const dev = process.env.E2E_HOOKS === '1' ? [DevController] : [];
     ChargesService,
     VerdictsService,
     DeadlineService,
+    CrimesService,
   ],
 })
 export class AppModule implements NestModule {
@@ -55,6 +59,7 @@ export class AppModule implements NestModule {
       .forRoutes(
         PairingController,
         ChargesController,
+        CrimesController,
         DeadlineController,
         VerdictsController,
         EventsController,

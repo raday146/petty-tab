@@ -7,7 +7,7 @@ describe('pushText (spec §12, §10)', () => {
   it('words every event as the spec does', () => {
     expect(pushText({ type: 'joined', name: 'Alex', species: 'cat' })).toBe('Alex joined as the Judgy Cat.');
     expect(pushText({ type: 'plea.guilty', name: 'Alex' })).toBe('Alex owned it.');
-    expect(pushText({ type: 'plea.appeal', name: 'Alex', crimeKey: 'trash' })).toBe(
+    expect(pushText({ type: 'plea.appeal', name: 'Alex', title: 'Trash Jenga' })).toBe(
       'Alex cries foul: Trash Jenga. Your call.',
     );
     expect(pushText({ type: 'appeal.upheld', name: 'Maya' })).toBe('Maya says nice try. It counts.');
@@ -17,6 +17,9 @@ describe('pushText (spec §12, §10)', () => {
     expect(pushText({ type: 'verdict.tie' })).toBe('Dead even this week. Suspiciously wholesome.');
     expect(pushText({ type: 'reminder', name: 'Maya', sentenceKey: 'coffee7' })).toBe(
       'You still owe Maya: 7 days of morning coffee duty.',
+    );
+    expect(pushText({ type: 'chore.neglected', title: 'Dishes duty' })).toBe(
+      "Dishes duty didn't happen yesterday. It's on the tab.",
     );
     expect(pushText({ type: 'settle.proposed', name: 'Maya' })).toBe(
       'Maya wants to settle the tab right now! Ready to face the verdict?',

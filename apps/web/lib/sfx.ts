@@ -8,12 +8,36 @@ let unlocked = false;
 const KEY = 'pt-sound';
 let soundOn = true;
 
+/**
+ * How iOS mixes our sounds with other audio (Safari 17+). 'transient' ducks music instead of stopping it.
+ * Calibration knob from the phone test: 'playback' also plays with the silent switch on, but pauses music.
+ */
+const AUDIO_SESSION = 'transient';
+
+/**
+ * iOS only starts audio inside a gesture: create and resume the context in the tap itself, with a silent
+ * buffer, rather than later in a timeout (the stamp lands 180 ms after the tap). Every gesture checks again,
+ * because iOS suspends or interrupts the context (a call, the app in the background).
+ */
+function wake(): void {
+  unlocked = true;
+  const a = audio();
+  if (!a || a.ctx.state === 'running') return;
+  const silent = a.ctx.createBufferSource();
+  silent.buffer = a.ctx.createBuffer(1, 1, 22050);
+  silent.connect(a.ctx.destination);
+  silent.start(0);
+}
+
 if (typeof window !== 'undefined') {
-  const unlock = (): void => {
-    unlocked = true;
-  };
-  window.addEventListener('pointerdown', unlock, { once: true, capture: true });
-  window.addEventListener('keydown', unlock, { once: true, capture: true });
+  for (const type of ['pointerdown', 'touchend', 'keydown']) {
+    window.addEventListener(type, wake, { capture: true, passive: true });
+  }
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && ctx && ctx.state !== 'running') void ctx.resume();
+  });
+  const session = (navigator as { audioSession?: { type: string } }).audioSession;
+  if (session) session.type = AUDIO_SESSION;
   try {
     soundOn = localStorage.getItem(KEY) !== 'off';
   } catch {
@@ -40,11 +64,12 @@ function audio(): { ctx: AudioContext; out: AudioNode } | null {
     ctx = new AudioContext();
     const comp = ctx.createDynamicsCompressor();
     const gain = ctx.createGain();
-    gain.gain.value = 0.45;
+    gain.gain.value = 0.9;
     comp.connect(gain).connect(ctx.destination);
     master = comp;
   }
-  if (ctx.state === 'suspended') void ctx.resume();
+  // 'interrupted' is iOS's state after a call or a trip to the background.
+  if (ctx.state !== 'running') void ctx.resume();
   return { ctx, out: master! };
 }
 
@@ -93,6 +118,11 @@ function noise(dur: number, f0: number, f1: number, gain: number, at = 0, q = 1)
   src.start(t);
 }
 
+/** A short vibration where the platform has one (Android; iOS Safari has none). Quiet when sound is off. */
+export function buzz(ms: number): void {
+  if (soundOn) navigator.vibrate?.(ms);
+}
+
 const knock = (at = 0): void => {
   noise(0.04, 900, 700, 0.5, at, 2);
   tone(230, 140, 0.07, 0.6, at);
@@ -101,8 +131,14 @@ const knock = (at = 0): void => {
 export const sfx = {
   tap: (): void => tone(520, 430, 0.05, 0.14),
   pop: (): void => {
-    tone(660, 660, 0.07, 0.14);
-    tone(990, 990, 0.16, 0.12, 0.07);
+    tone(660, 660, 0.07, 0.22);
+    tone(990, 990, 0.16, 0.2, 0.07);
+  },
+  /** The score bump: a quick two-note rise. */
+  bump: (): void => {
+    tone(523, 523, 0.09, 0.3);
+    tone(784, 784, 0.16, 0.3, 0.08);
+    buzz(15);
   },
   knock,
   gavel: (): void => {
@@ -110,8 +146,9 @@ export const sfx = {
     knock(0.22);
   },
   stamp: (): void => {
-    tone(150, 50, 0.2, 0.7);
-    noise(0.06, 800, 300, 0.4, 0, 0.7);
+    tone(150, 50, 0.24, 1);
+    noise(0.08, 800, 300, 0.7, 0, 0.7);
+    buzz(35);
   },
   paper: (): void => noise(0.2, 3200, 1300, 0.12, 0, 1.2),
   thump: (at = 0): void => {
@@ -119,8 +156,8 @@ export const sfx = {
     noise(0.05, 400, 200, 0.25, at, 0.8);
   },
   chime: (): void => {
-    tone(1319, 1319, 0.5, 0.1);
-    tone(1760, 1760, 0.6, 0.09, 0.08);
-    tone(2637, 2637, 0.7, 0.05, 0.16);
+    tone(1319, 1319, 0.5, 0.24);
+    tone(1760, 1760, 0.6, 0.2, 0.08);
+    tone(2637, 2637, 0.7, 0.12, 0.16);
   },
 };
