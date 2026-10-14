@@ -57,11 +57,16 @@ test.describe('picker', () => {
   });
 });
 
+// Deliberate (owner, 2026-10-14, phone test): the scoreboard lost its owed row (now the tally sheet), the button
+// is a footer under the list, and the card copy changed. Below the score card's top row the references no
+// longer apply, so the tab screens compare the header and the duel only; the rest is checked by assertions.
+const BELOW_DUEL = { x: 0, y: 280, w: 390, h: 600 };
+
 test.describe('the tab', () => {
   test('matches 06', async ({ page }) => {
     await open(page, 'tab');
     // The burrito row: the prototype marks it appealed but still shows its pill; here it is guilty (sad face).
-    await expectMatchesReference(page, '06-tab.png');
+    await expectMatchesReference(page, '06-tab.png', { ignore: [BELOW_DUEL] });
   });
 
   test('log sheet matches 07', async ({ page }) => {
@@ -74,7 +79,7 @@ test.describe('the tab', () => {
   test('plea card matches 08 (layout: drawn from the accused side)', async ({ page }) => {
     await open(page, 'plea');
     await expect(page.getByText('Alex says you did this.')).toBeVisible();
-    await expectMatchesReference(page, '08-plea-card.png');
+    await expectMatchesReference(page, '08-plea-card.png', { ignore: [BELOW_DUEL] });
   });
 
   test.describe('with motion', () => {
@@ -82,7 +87,7 @@ test.describe('the tab', () => {
 
     test('the GUILTY stamp matches 09 (layout: drawn from the accused side)', async ({ page }) => {
       await open(page, 'plea');
-      await page.getByRole('button', { name: 'Guilty' }).click();
+      await page.getByRole('button', { name: 'Fine, I did it' }).click();
       await expect(page.getByText('Guilty', { exact: true })).toBeVisible();
       await page.waitForTimeout(800);
       // Freeze a deterministic frame: the slam 0.8 s in (stamp held, pill still hidden), idle loops at 0.
@@ -93,43 +98,53 @@ test.describe('the tab', () => {
           a.currentTime = /slamfade|pillwait/.test(name) ? 800 : 0;
         }
       });
-      await expectMatchesReference(page, '09-plea-guilty-stamp.png');
+      await expectMatchesReference(page, '09-plea-guilty-stamp.png', { ignore: [BELOW_DUEL] });
     });
   });
 
   test('after the plea matches 10', async ({ page }) => {
     await open(page, 'plea');
-    await page.getByRole('button', { name: 'Guilty' }).click();
+    await page.getByRole('button', { name: 'Fine, I did it' }).click();
     await expect(page.locator('[role=status]')).toHaveAttribute('aria-hidden', 'true', { timeout: 5000 });
-    await expectMatchesReference(page, '10-tab-after-plea.png');
+    await expectMatchesReference(page, '10-tab-after-plea.png', { ignore: [BELOW_DUEL] });
   });
 
   test('Hebrew name matches 15', async ({ page }) => {
     await open(page, 'plea?me=מאיה&meSp=rabbit&themSp=sheep');
-    await page.getByRole('button', { name: 'Guilty' }).click();
+    await page.getByRole('button', { name: 'Fine, I did it' }).click();
     await expect(page.locator('[role=status]')).toHaveAttribute('aria-hidden', 'true', { timeout: 5000 });
     await expect(page.getByText('leads by 6')).toContainText('מאיה');
-    await expectMatchesReference(page, '15-tab-hebrew-name.png');
+    await expectMatchesReference(page, '15-tab-hebrew-name.png', { ignore: [BELOW_DUEL] });
   });
 
-  test('filing a crime bumps the pill, shows the toast, and Undo takes it back', async ({ page }) => {
+  test('filing a crime moves the score, shows the toast, and Undo takes it back', async ({ page }) => {
     await open(page, 'tab');
     await page.getByRole('button', { name: 'Log a petty crime' }).click();
     await page.getByRole('button', { name: /The Phantom Sip/ }).click();
     await expect(page.getByRole('status')).toContainText('Left a carton with three drops of milk');
-    await expect(page.getByText('5 coffees')).toBeVisible();
     await expect(page.getByText('Maya leads by 6')).toBeVisible();
     await page.getByRole('button', { name: 'Undo' }).click();
-    await expect(page.getByText('4 coffees')).toBeVisible();
     await expect(page.getByText('Maya leads by 5')).toBeVisible();
+    await page.getByRole('button', { name: /Who owes what/ }).click();
+    await expect(page.getByRole('dialog', { name: 'Who owes what' }).getByText('4 coffees')).toBeVisible();
   });
 
-  test('the filer upholds an appeal', async ({ page }) => {
+  test('the filer says nice try to a cried foul', async ({ page }) => {
     await open(page, 'appeal');
-    await expect(page.getByText('Alex appeals.')).toBeVisible();
-    await page.getByRole('button', { name: 'Uphold' }).click();
-    await expect(page.getByText('The Blanket Burrito, Alex, upheld')).toBeAttached();
+    await expect(page.getByText('Alex is disputing this!')).toBeVisible();
+    await page.getByRole('button', { name: 'Nice try' }).click();
+    await expect(page.getByText('The Blanket Burrito, Alex, counts')).toBeAttached();
     await test.info().attach('appeal card', { body: await page.screenshot(), contentType: 'image/png' });
+  });
+
+  test('the ? opens How it works', async ({ page }) => {
+    await open(page, 'tab');
+    await page.getByRole('button', { name: 'How it works' }).click();
+    const sheet = page.getByRole('dialog', { name: 'How it works' });
+    await expect(sheet.getByText('Own it or dispute it.')).toBeVisible();
+    await test.info().attach('how it works', { body: await page.screenshot(), contentType: 'image/png' });
+    await sheet.getByRole('button', { name: 'Got it' }).click();
+    await expect(sheet).toBeHidden();
   });
 
   test('waiting for the partner', async ({ page }) => {

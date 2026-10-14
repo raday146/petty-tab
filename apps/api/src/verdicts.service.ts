@@ -68,7 +68,7 @@ export class VerdictsService implements OnModuleInit {
     const pairs = await this.prisma.pair.findMany({
       where: { endedAt: null, id: only?.pairId },
       include: {
-        members: { orderBy: { joinedAt: 'asc' } },
+        members: { orderBy: [{ joinedAt: 'asc' }, { id: 'asc' }] },
         verdicts: { orderBy: { weekStart: 'desc' }, take: 1 },
       },
     });

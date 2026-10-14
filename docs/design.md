@@ -55,7 +55,7 @@ name renders in the same face as the English around it. Stack:
 | Body | 15–17 / 1.4 | 400 | 0 | Tagline, sheet copy |
 | Small | 13–14 / 1.35 | 400–600 | 0 | Bios, owed labels, chips |
 | Pill | 13 / 1 | 600 | 0 | Penalty pills |
-| Stamp | 13 (rows) / 17 (verdict) | 700–800 | 0.14em, uppercase | GUILTY, APPEALED |
+| Stamp | 13 (rows) / 17 (verdict) | 700–800 | 0.14em, uppercase | GUILTY, DISPUTED |
 
 No italics anywhere. Uppercase is only for stamps and the reel's cold open.
 
@@ -81,9 +81,9 @@ No italics anywhere. Uppercase is only for stamps and the reel's cold open.
 | Animal sticker | Head from `art.stickerHead(species, face)`, 46px in rows, 70px on the scoreboard, 30px in chips. |
 | Name chip | Paper pill, 42px tall, 30px sticker + name. Used on the intro (who you are). |
 | Crime row | Grid: 48px sticker · title (1fr) · pill. 12px vertical padding, no dividers, no meta text. |
-| Plea card | Shown to the accused only. Butter card: a crime row, then "<bdi>Maya</bdi> says you did this." with **Guilty** (ink) and **Appeal** (outline) buttons, 40px tall. (The prototype's card reads "Alex pleads…" because it is drawn on the filer's phone; see spec §8.) |
-| Appeal card | Shown to the filer only. Same card as the plea card: the crime row, then "<bdi>Alex</bdi> appeals." with **Uphold** (ink) and **Drop** (outline). Uphold slams GUILTY; Drop fades the row to its dropped state. |
-| Scoreboard | Paper card. Row 1: my sticker and name · rope + "Maya leads by 5" · partner sticker and name. Row 2 after a dashed line: "Maya is owed" pills · "Alex is owed" pills. |
+| Plea card | Shown to the accused only. Butter card: a crime row, then "<bdi>Maya</bdi> says you did this." with **Fine, I did it** (ink) and **Not me!** (outline) buttons, 40px tall. (The prototype's card reads "Alex pleads…" because it is drawn on the filer's phone; see spec §8.) |
+| Appeal card | Shown to the filer only. Same card as the plea card: the crime row, then "<bdi>Alex</bdi> is disputing this! What's the call?" on its own line above **Nice try** (ink) and **Let it slide** (outline). Nice try slams GUILTY; Let it slide fades the row to its dropped state. |
+| Scoreboard | Paper card, one tap target. My sticker and name · rope + "Maya leads by 5" · partner sticker and name; after a dashed line, "Who owes what" (13.5px, 600, mute). A tap opens the tally sheet: "Maya is owed" pills · "Alex is owed" pills. The lead line bumps when my score goes up. (Changed on 2026-10-14 after the phone test: the owed pills crowded a small phone; reference screens 06, 08–10 and 15 still show them.) |
 | Rope | 3px track at 16% ink, a centre tick, a 20px mustard marker with a 2.5px ink ring; moves with a springy 550ms ease. |
 | Animal card | Paper card: 120px tinted portrait panel (`art.portrait`), title, one-line bio. Selected: 3px mustard ring and a mustard check badge. Partner's animal: an ink chip with the partner's name. When the count is odd, the last card spans both columns with the portrait on the left. |
 | Crime tile | Linen tile: 54px sticker (tilted ±4°), title, pill. |
@@ -127,6 +127,9 @@ prototype's "Invite your partner" button and pre-filled name chip are placeholde
 ### The Tab (`06`–`10`, `15`)
 - Title "The Tab" and a paper chip "Verdict on Sunday" (gavel icon, knocks every few seconds) that opens the
   latest verdict. Before the first verdict it is a plain label, "First verdict Sunday 20:00", with no gavel knock.
+- A 40px paper "?" button at the top start (the name chip holds the top end) opens the **How it works** sheet:
+  three numbered steps (Log a slip-up · Own it or dispute it · Sunday verdict) and **Got it**. Also shown while
+  waiting for the partner.
 - Waiting state (pair not complete): the invite card replaces the scoreboard, no FAB.
 - Scoreboard (above). Faces react: the leader's sticker is `smug`, the trailing one `strain`, both `plain` when
   tied.
@@ -134,12 +137,13 @@ prototype's "Invite your partner" button and pre-filled name chip are placeholde
   the viewer filed, newest first. The full who-sees-what table is in spec §8.
 - Crime rows for the week, newest first. The sticker shows the **accused** with a face for the status:
   `plain` pending, `sad` guilty or upheld, `smug` appealed, `plain` dropped. Dropped rows mute the title
-  (`--mute`) and hide the pill; appealed rows show a small "Appealed" pill outline in place of the penalty.
-- After a plea or an uphold, a GUILTY or APPEALED stamp slams onto the row for 1.9s (the pill hides meanwhile) with a stamp
+  (`--mute`) and hide the pill; appealed rows show a small "Disputed" pill outline in place of the penalty.
+- After a plea or a Nice try, a GUILTY or DISPUTED stamp slams onto the row for 1.9s (the pill hides meanwhile) with a stamp
   sound and a 300ms screen nudge.
-- FAB **Log a petty crime** (58px, ink) opens the crime sheet: "What did <bdi>Alex</bdi> do?" and a two-column
-  grid of crime tiles. Picking one files it, closes the sheet, bumps the matching pill, and shows a toast with
-  the crime's description.
+- **Log a petty crime** (58px, ink) sits in a footer under the list, not floating over it, so it never covers a
+  charge; only the list scrolls (no page bounce on iOS). It opens the crime sheet: "What did <bdi>Alex</bdi>
+  do?" and a two-column grid of crime tiles. Picking one files it, closes the sheet, bumps the lead line, and
+  shows a toast with the crime's description.
 
 ### The Sunday verdict (`11`, `12`, `13`, `16`)
 The card is the shareable 9:16 image; the app chrome sits over it and is never part of the export.
@@ -207,11 +211,12 @@ Exact gains and envelopes: see the `sfx` object in `reference/prototype.html`. T
 
 ## 9. Voice and copy
 
-Sentence case, plain verbs, short. The joke lives in the crime and sentence names; the UI around them stays
-calm. Buttons say what happens ("Log a petty crime", "Share story", "Continue as Maya the Cat").
+Sentence case, plain verbs, short. Couple banter, not courtroom jargon (owner, 2026-10-14): no "plea",
+"appeal", "uphold", "drop" or "court" on screen or in pushes. "Guilty", "verdict" and "sentence" stay; they
+are the game. Buttons say what happens ("Log a petty crime", "Fine, I did it", "Share story").
 
-Examples: "Keep score of the little things. Settle up on Sunday." · "Alex pleads guilty. No contest." · "Alex
-appeals. Maya decides." · "Maya says you did this." · "Alex owes Maya" · "Dead even".
+Examples: "Keep score of the little things. Settle up on Sunday." · "Alex owned it." · "Alex cries foul. Maya
+decides." · "Maya says you did this." · "Nice try" · "Let it slide" · "Alex owes Maya" · "Dead even".
 
 ## 10. Accessibility and languages
 

@@ -19,7 +19,7 @@ test('the notifications offer comes once the pair completes, and only once', asy
   await b.goto(path(link));
   await pick(b, 'Alex', /Bear/);
   await expect(offer).toBeVisible({ timeout: 2000 });
-  await expect(offer).toContainText('A ping when Alex files a charge or pleads');
+  await expect(offer).toContainText('A ping when Alex logs a crime or cries foul');
   await offer.getByRole('button', { name: 'Not now' }).click();
   await expect(offer).toBeHidden();
 

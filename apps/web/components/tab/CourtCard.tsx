@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { cx } from '@/lib/cx';
 import { CrimeRow, type Charge } from './CrimeRow';
 import type { Member } from './Scoreboard';
 import s from './CourtCard.module.css';
@@ -12,7 +13,7 @@ type Props = { charge: Charge; accused: Member } & (
       onAppeal: () => void;
     }
   | {
-      /** Shown to the filer: "<accused> appeals." */
+      /** Shown to the filer: "<accused> is disputing this! What's the call?" */
       kind: 'appeal';
       onUphold: () => void;
       onDrop: () => void;
@@ -25,29 +26,29 @@ export function CourtCard(props: Props): ReactNode {
   return (
     <div className={s.card}>
       <CrimeRow charge={charge} accused={accused} inCard />
-      <div className={s.ask}>
+      <div className={cx(s.ask, props.kind === 'appeal' && s.stacked)}>
         {props.kind === 'plea' ? (
           <>
             <p>
               <bdi>{props.filer.name}</bdi> says you did this.
             </p>
             <button type="button" onClick={props.onGuilty}>
-              Guilty
+              Fine, I did it
             </button>
             <button type="button" className={s.outline} onClick={props.onAppeal}>
-              Appeal
+              Not me!
             </button>
           </>
         ) : (
           <>
             <p>
-              <bdi>{accused.name}</bdi> appeals.
+              <bdi>{accused.name}</bdi> is disputing this! What&rsquo;s the call?
             </p>
             <button type="button" onClick={props.onUphold}>
-              Uphold
+              Nice try
             </button>
             <button type="button" className={s.outline} onClick={props.onDrop}>
-              Drop
+              Let it slide
             </button>
           </>
         )}

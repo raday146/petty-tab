@@ -2,8 +2,6 @@ import { Injectable, type OnModuleInit } from '@nestjs/common';
 import {
   canUndo,
   currentWeek,
-  FILING_LIMIT,
-  FILING_WINDOW_MS,
   PLEA_MS,
   pushText,
   tally,
@@ -79,14 +77,6 @@ export class ChargesService implements OnModuleInit {
   async file(userId: string, body: z.output<typeof fileChargeBody>): Promise<{ id: string }> {
     const { me, them, week } = await this.complete(userId);
     const now = this.clock.now();
-    // Undone charges are hard-deleted, so they never count toward the limit.
-    // ponytail: count-then-insert; two simultaneous taps could make 11. Advisory lock if it ever shows up.
-    const recent = await this.prisma.charge.count({
-      where: { filerId: me.id, createdAt: { gt: new Date(now.getTime() - FILING_WINDOW_MS) } },
-    });
-    if (recent >= FILING_LIMIT) {
-      throw new ApiError(429, 'rate_limited', 'Ten charges in a day is plenty. Try again tomorrow.');
-    }
     const { id } = await this.prisma.charge.create({
       data: {
         pairId: me.pairId,

@@ -3,9 +3,6 @@ import type { Species } from '@petty-tab/art';
 import { CRIME_KEYS, type ChargeStatus, type CrimeKey, type SentenceKey } from './catalog.ts';
 import type { Owed } from './score.ts';
 
-/** spec §8 / Open decision 7: charges per filer per rolling 24 hours. */
-export const FILING_LIMIT = 10;
-export const FILING_WINDOW_MS = 24 * 60 * 60 * 1000;
 /** spec §8: the filer can undo for 10 seconds. */
 export const UNDO_MS = 10_000;
 /** spec §8 / Open decision 2: 24 hours without a plea counts as guilty. */
