@@ -38,12 +38,20 @@ model Pair {
   id        String    @id @default(dbgenerated("uuidv7()")) @db.Uuid
   timezone  String
   createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
-  endedAt   DateTime? @map("ended_at") @db.Timestamptz
-  members   Member[]
-  invites   Invite[]
-  charges   Charge[]
-  verdicts  Verdict[]
+  endedAt     DateTime? @map("ended_at") @db.Timestamptz
+  /// The current cycle (spec §10); null until the second member joins. Charges carry it as week_start.
+  cycleStart  DateTime? @map("cycle_start") @db.Timestamptz
+  cycleEnd    DateTime? @map("cycle_end") @db.Timestamptz
+  /// The one open deadline proposal (spec §10): set while open; proposalEnd null means "settle now".
+  proposalBy  String?   @map("proposal_by") @db.Uuid
+  proposalEnd DateTime? @map("proposal_end") @db.Timestamptz
+  proposalAt  DateTime? @map("proposal_at") @db.Timestamptz
+  members     Member[]
+  invites     Invite[]
+  charges     Charge[]
+  verdicts    Verdict[]
 
+  @@index([cycleEnd])
   @@map("pairs")
 }
 
@@ -138,7 +146,7 @@ model Verdict {
   /// Storage keys of the rendered card PNG and reel MP4 for the current sentence (spec §11); null until rendered.
   cardUrl          String?   @map("card_url")
   reelUrl          String?   @map("reel_url")
-  /// The last Wednesday reminder sent to the loser (spec §12).
+  /// The last halfway-point reminder sent to the loser (spec §12).
   remindedAt       DateTime? @map("reminded_at") @db.Timestamptz
 
   @@unique([pairId, weekStart])

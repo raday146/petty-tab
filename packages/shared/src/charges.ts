@@ -42,6 +42,8 @@ export function canUndo(status: ChargeStatus, ageMs: number): 'already_pleaded' 
 export const fileChargeBody = z.object({ crimeKey: z.enum(CRIME_KEYS as [CrimeKey, ...CrimeKey[]]) });
 export const pleaBody = z.object({ plea: z.enum(['guilty', 'appeal']) });
 export const appealBody = z.object({ decision: z.enum(['uphold', 'drop']) });
+/** spec §10: `POST /deadline/proposal`. A new deadline for the current cycle, or null to settle now. */
+export const proposalBody = z.object({ end: z.iso.datetime({ offset: true }).nullable() });
 
 /** One charge as the viewer sees it. */
 export interface TabCharge {
@@ -59,8 +61,12 @@ export interface TabView {
   meOwed: Owed;
   themOwed: Owed;
   charges: TabCharge[];
-  /** A sealed verdict exists, so the "Verdict on Sunday" chip opens it (spec §10). */
+  /** A sealed verdict exists, so the deadline sheet offers it (spec §10). */
   hasVerdict: boolean;
+  /** The current cycle's end (ISO) and the same in the pair's timezone, "Sun 20:00" (spec §10). */
+  deadline: { end: string; label: string };
+  /** The open deadline proposal (spec §10): `end` null is "settle now", `label` is the proposed time. */
+  proposal: { mine: boolean; end: string | null; label: string | null } | null;
   /** Sentences not yet confirmed served, oldest first: "Alex still owes Maya: …" (spec §10). */
   unconfirmed: { winner: string; loser: string; sentence: SentenceKey }[];
 }
@@ -77,7 +83,10 @@ export type EventType =
   | 'member.updated'
   | 'member.left'
   | 'verdict.sealed'
-  | 'verdict.updated';
+  | 'verdict.settled'
+  | 'verdict.updated'
+  | 'deadline.proposed'
+  | 'deadline.decided';
 
 export interface TabEvent {
   type: EventType;
