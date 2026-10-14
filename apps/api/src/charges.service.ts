@@ -1,6 +1,7 @@
 import { Injectable, type OnModuleInit } from '@nestjs/common';
 import {
   bookFor,
+  breakdown,
   canUndo,
   choreDaysDue,
   crimeInfo,
@@ -16,6 +17,7 @@ import {
   transition,
   UNDO_MS,
   type appealBody,
+  type BreakdownView,
   type fileChargeBody,
   type pleaBody,
   type SentenceKey,
@@ -247,6 +249,36 @@ export class ChargesService implements OnModuleInit {
           return { winner: snap.winner.name, loser: snap.loser.name, sentence: v.sentenceKey as SentenceKey };
         }),
     };
+  }
+
+  /** The Breakdown screen: this week by crime, chores, every past verdict and all-time stats. */
+  async breakdown(userId: string): Promise<BreakdownView> {
+    const { me, them, week } = await this.complete(userId);
+    const pairId = me.pairId;
+    const [all, verdicts, chores, book] = await Promise.all([
+      this.prisma.charge.findMany({ where: { pairId } }),
+      this.prisma.verdict.findMany({ where: { pairId }, orderBy: { weekStart: 'asc' } }),
+      this.prisma.customCrime.findMany({
+        where: { pairId, choreOwnerId: { not: null }, removedAt: null },
+        include: { days: { where: { day: { gte: new Date(localDay(week.start, me.pair.timezone)) } } } },
+      }),
+      loadBook(this.prisma, pairId),
+    ]);
+    const charge = (c: (typeof all)[number]) => ({ filerId: c.filerId, crime: c.crimeKey, status: c.status });
+    return breakdown({
+      me: { id: me.id, name: me.displayName },
+      them: { id: them.id, name: them.displayName },
+      week: all.filter((c) => c.weekStart.getTime() === week.start.getTime()).map(charge),
+      allCharges: all.map(charge),
+      chores: chores.map((c) => ({
+        title: c.title,
+        ownerId: c.choreOwnerId!,
+        done: c.days.filter((d) => d.doneAt).length,
+        neglected: c.days.filter((d) => d.chargeId).length,
+      })),
+      verdicts: verdicts.map((v) => ({ ...v, snapshot: v.snapshot as unknown as VerdictSnapshot })),
+      book,
+    });
   }
 
   /**

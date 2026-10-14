@@ -103,3 +103,17 @@ test('a tie: Dead even, no sentence, nothing owed', async ({ browser }) => {
   await b.getByRole('button', { name: 'Share card' }).click(rendered);
   expect((await download).suggestedFilename()).toBe('petty-tab-verdict.png');
 });
+
+test('the breakdown shows this week, past verdicts and all-time wins', async ({ browser }) => {
+  const { a } = await pair(browser);
+  await a.request.post('/api/charges', { data: { crimeKey: 'sip' } });
+  await a.request.post('/api/dev/seal');
+  await a.request.post('/api/charges', { data: { crimeKey: 'trash' } });
+  await a.getByRole('button', { name: /Who owes what/ }).click(live);
+  const screen = a.getByRole('main', { name: 'The breakdown' });
+  await expect(screen.getByRole('region', { name: 'This week' }).getByText('Trash Jenga')).toBeVisible();
+  await expect(screen.getByRole('region', { name: 'Past verdicts' }).getByText(/Maya won/)).toBeVisible();
+  await expect(screen.getByText('Maya leads 1–0 all-time.')).toBeVisible();
+  await screen.getByRole('button', { name: 'Back to the tab' }).click();
+  await expect(a.getByRole('button', { name: 'Log a petty crime' })).toBeVisible();
+});

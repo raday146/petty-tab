@@ -18,13 +18,25 @@ test('Maya adds her own crime, files it, and Alex owns it', async ({ browser }, 
   await expect(a.getByText('Toilet paper roulette is on the list.')).toBeVisible();
 
   await a.getByRole('button', { name: 'Log a petty crime' }).click();
-  await a.getByRole('dialog').getByRole('button', { name: /Toilet paper roulette/ }).click();
+  await a
+    .getByRole('dialog')
+    .getByRole('button', { name: /Toilet paper roulette/ })
+    .click();
   await expect(b.getByText('Maya says you did this.')).toBeVisible(live);
   await expect(b.getByText('Toilet paper roulette', { exact: false }).first()).toBeVisible();
   await b.getByRole('button', { name: 'Fine, I did it' }).click();
 
+  await expect(a.getByText('Maya leads by 1')).toBeVisible(live);
   await a.getByRole('button', { name: /Who owes what/ }).click();
-  await expect(a.getByRole('dialog', { name: 'Who owes what' }).getByText('1 dish load')).toBeVisible(live);
+  const breakdown = a.getByRole('main', { name: 'The breakdown' });
+  await expect(breakdown.getByText('1 dish load')).toBeVisible();
+  await expect(
+    breakdown.getByRole('region', { name: 'This week' }).getByText('Toilet paper roulette'),
+  ).toBeVisible();
+  await info.attach('A: the breakdown', {
+    body: await a.screenshot({ fullPage: true }),
+    contentType: 'image/png',
+  });
 });
 
 test('Alex ticks his daily chore and Maya sees it live; removing it takes it off the tab', async ({

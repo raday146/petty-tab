@@ -1,5 +1,5 @@
 import { Body, Controller, Delete, Get, HttpCode, Param, Post } from '@nestjs/common';
-import { appealBody, fileChargeBody, pleaBody, type TabView } from '@petty-tab/shared';
+import { appealBody, fileChargeBody, pleaBody, type BreakdownView, type TabView } from '@petty-tab/shared';
 import { ChargesService } from './charges.service.js';
 import { parse } from './errors.js';
 import { UserId } from './session.middleware.js';
@@ -12,6 +12,11 @@ export class ChargesController {
   @Get('tab')
   tab(@UserId() userId: string): Promise<TabView> {
     return this.charges.tab(userId);
+  }
+
+  @Get('breakdown')
+  breakdown(@UserId() userId: string): Promise<BreakdownView> {
+    return this.charges.breakdown(userId);
   }
 
   @Post('charges')

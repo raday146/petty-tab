@@ -148,6 +148,18 @@ describe('daily chores (spec §8)', () => {
     expect(to(ma)).toEqual(['Alex cries foul: Dishes duty. Your call.']);
   });
 
+  it('counts chore days done and neglected on the Breakdown', async () => {
+    const { a, b, pairId } = await pair();
+    const { id } = await crimes.create(a, { ...tp, title: 'Dishes duty', chore: 'them' });
+    now = at('2026-10-13T10:00:00Z');
+    await crimes.done(b, id, true);
+    await charges.neglectedChores(at('2026-10-14T22:00:00Z'), { pairId });
+    now = at('2026-10-14T22:00:00Z');
+    const view = await charges.breakdown(a);
+    expect(view.chores).toEqual([{ title: 'Dishes duty', owner: 'them', done: 1, neglected: 1 }]);
+    expect(view.week.them).toMatchObject({ total: 1, crimes: [{ title: 'Dishes duty', count: 1 }] });
+  });
+
   it('stops charging once the chore is removed', async () => {
     const { a, pairId } = await pair();
     const { id } = await crimes.create(a, { ...tp, chore: 'me' });

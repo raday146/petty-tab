@@ -65,6 +65,8 @@ interface Props {
   custom?: TabView['custom'];
   onCreateCrime?: (body: CustomCrimeInput) => Promise<void>;
   onRemoveCrime?: (id: string) => void;
+  /** Opens the Breakdown screen (a tap on the scoreboard); without it the tally sheet opens. */
+  onBreakdown?: () => void;
   /** Ticks (or unticks) one of the viewer's chores for today. */
   onChore?: (id: string, done: boolean) => void;
   onPlea: (id: string, plea: 'guilty' | 'appeal') => void;
@@ -290,7 +292,13 @@ export function Tab(props: Props): ReactNode {
               </button>
             </section>
           ) : (
-            <Scoreboard me={me} them={them} lead={props.lead} bump={bump} onOpen={() => setTallyOpen(true)} />
+            <Scoreboard
+              me={me}
+              them={them}
+              lead={props.lead}
+              bump={bump}
+              onOpen={props.onBreakdown ?? (() => setTallyOpen(true))}
+            />
           )}
           {!inviteLink && chores.length > 0 && (
             <ul className={s.chores} aria-label="Today's chores">
