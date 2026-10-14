@@ -112,7 +112,18 @@ foot rubs).
 | `dj` | Car DJ Crimes | Played DJ in the car. Badly. With commentary. | `tape` | foot | yes |
 
 The prototype's picker showed the first nine; Car DJ Crimes only appeared in its sample data. v1 lists all ten,
-so both members have a way to earn foot rubs. Custom crimes are out of scope for v1.
+so both members have a way to earn foot rubs.
+
+### The pair's own crimes (M9, decided by the owner on 2026-10-14)
+- Either member can add a crime of the pair's own: a title (1–40 characters), one line (up to 80), a unit
+  the creator picks (coffee, dish load or foot rub) and a sticker from the ten art stickers. It is shared by
+  both and listed first in the picker. Up to 30 at a time (`too_many_crimes`).
+- Either member can remove one. It leaves the picker, but charges and verdicts that used it keep its title.
+  There is no editing; remove it and add it again.
+- Charges store it as `custom:<id>`. It files, pleads, scores and seals exactly like a catalog crime. A
+  verdict's top crimes keep a custom crime's title and sticker as sealed, so removing it later changes nothing.
+- The title is user text: it is shown and rendered as text and never passed to `packages/art`; the sticker
+  is drawn from its key.
 
 ## 7. Sentences
 
@@ -126,6 +137,16 @@ so both members have a way to earn foot rubs. Custom crimes are out of scope for
 | `fitted` | Fitted sheet duty. Alone. | No tutorials. No crying. | `blanket` |
 
 ## 8. Charges and pleas
+
+### Daily chores (M9, decided by the owner on 2026-10-14)
+- A crime of the pair's own can be a daily chore for one member (the creator or the partner). Only that member
+  ticks it **done** for today, in the pair's timezone, and can untick it until midnight.
+- A chore day that ends unticked at local midnight files one charge for that chore, from the partner against
+  the owner, timed at midnight, in the week that day ended in. It then works like any charge: the owner can
+  own it or dispute it, and the partner decides. The owner gets "Dishes duty didn't happen yesterday. It's on
+  the tab." instead of the usual charge push.
+- The day the chore was created is never charged. A removed chore stops charging. The sweep runs every 15
+  minutes and catches up on the last two days; a day is charged at most once.
 
 ### Filing
 - Only possible when the pair is complete. A member picks a crime from the catalog; the charge is filed against
@@ -277,6 +298,7 @@ On iPhone this only works once the app is added to the Home Screen; the prompt s
 | Sentence reminder | loser | Once per week, at its halfway point, while a sentence is unconfirmed (decided by the owner on 2026-10-14; it was Wednesday 19:00) |
 | Settle now or a move proposed | partner | "Maya wants to settle the tab right now! Ready to face the verdict?" / "Maya is moving the goalposts: verdict Fri 21:00. Deal?" |
 | Proposal answered | proposer | "Alex agreed. Verdict Fri 21:00." / "Alex says nope." / "Alex says not yet." |
+| Chore day missed | chore owner | "<chore title> didn't happen yesterday. It's on the tab." |
 
 Max one push per event; charges filed within 2 minutes of each other are batched into one push. A charge's
 push is held 10 seconds so an undo can cancel it (§8).
@@ -295,6 +317,9 @@ charges         id, pair_id, week_start, filer_id, accused_id, crime_key, status
 verdicts        id, pair_id, week_start, week_end, sealed_at, winner_id, loser_id, is_tie,
                 snapshot jsonb, sentence_key, shared_at, sentence_locked_at, served_at, confirmed_at,
                 card_url, reel_url
+custom_crimes   id, pair_id, created_by, title, description, sticker, unit, chore_owner_id, created_at,
+                removed_at                                                   index (pair_id)
+chore_days      crime_id, day (local date), done_at, charge_id               key (crime_id, day)
 push_subs       id, user_id, endpoint, keys jsonb, created_at
 ```
 
@@ -305,7 +330,8 @@ push_subs       id, user_id, endpoint, keys jsonb, created_at
 All endpoints are under `/api`, use the session cookie, and return JSON. Errors use
 `{ error: { code, message } }` with stable codes (at least `not_in_pair`, `pair_incomplete`, `already_in_pair`,
 `invite_invalid`, `species_taken`, `rate_limited`, `undo_expired`, `already_pleaded`, `week_closed`,
-`not_allowed`, `sentence_locked`, `proposal_open`, `no_proposal`, `too_soon`, `too_far`, `invalid_request`
+`not_allowed`, `sentence_locked`, `proposal_open`, `no_proposal`, `too_soon`, `too_far`, `too_many_crimes`,
+`invalid_request`
 for a body that fails its schema).
 
 ```
@@ -321,7 +347,12 @@ PATCH  /members/me                       { name?, species? }
 DELETE /pairs/current                    leave the pair
 GET    /tab                              current week: members, scores, owed by unit, charges, pending pleas,
                                          unconfirmed sentences, the deadline and any open proposal
-POST   /charges                          { crimeKey }
+GET    /breakdown                        the Breakdown: this week by crime, chores, past verdicts, all-time
+POST   /charges                          { crimeKey }   (a catalog key or custom:<id>)
+POST   /crimes                           { title, description, unit, sticker, chore: "me" | "them" | null }
+DELETE /crimes/:id                       remove one of the pair's own crimes
+POST   /chores/:id/done                  tick today (the chore's owner)
+DELETE /chores/:id/done                  untick today (until midnight)
 DELETE /charges/:id                      undo (filer, within 10 s, before any plea)
 POST   /charges/:id/plea                 { plea: "guilty" | "appeal" }
 POST   /charges/:id/appeal               { decision: "uphold" | "drop" }   (filer)
@@ -341,7 +372,8 @@ GET    /events                           SSE stream for the pair: charge.created
                                          plea.appeal, appeal.upheld, appeal.dropped, member.joined,
                                          member.updated, member.left, verdict.sealed,
                                          verdict.settled (opens the verdict), verdict.updated,
-                                         deadline.proposed, deadline.decided. Each message is
+                                         deadline.proposed, deadline.decided,
+                                         crimes.updated, chore.updated. Each message is
                                          { type, chargeId? }; clients refetch /tab. 24 hours of silence
                                          sends plea.guilty too.
 POST   /push/subscriptions               { endpoint, keys }
@@ -350,7 +382,7 @@ DELETE /push/subscriptions               { endpoint }
 
 ## 15. Out of scope for v1
 
-Custom crimes, more than two people per tab, chat or comments, money of any kind, accounts with email or
+More than two people per tab, chat or comments, money of any kind, accounts with email or
 OAuth, a Hebrew UI (names in Hebrew are supported), native apps, ads.
 
 ## 16. Open decisions
