@@ -234,6 +234,8 @@ describe('/tab (spec §9)', () => {
         { id: sip, crime: 'sip', status: 'pending', filer: 'me' },
       ],
       hasVerdict: false,
+      deadline: { end: '2026-10-18T17:00:00.000Z', label: 'Sun 20:00' },
+      proposal: null,
       unconfirmed: [],
     });
     expect((await service.tab(b)).lead).toBe(-1);

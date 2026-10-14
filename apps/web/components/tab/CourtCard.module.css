@@ -53,3 +53,7 @@
   background: var(--mustard);
   color: var(--ink);
 }
+/* The proposal card has no crime row above it. */
+.ask.proposal {
+  margin-top: 8px;
+}
