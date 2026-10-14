@@ -75,6 +75,10 @@ export interface TabView {
   meOwed: Owed;
   themOwed: Owed;
   charges: TabCharge[];
+  /** Catalog crimes out of play for this pair (spec §6); the picker hides them. */
+  crimesOff: CrimeKey[];
+  /** spec §10: null weekly, or every 3 or 5 days. */
+  cycleDays: 3 | 5 | null;
   /** The pair's own crimes (spec §6); removed ones stay so old charges keep their title, out of the picker. */
   custom: CustomCrimeView[];
   /** A sealed verdict exists, so the deadline sheet offers it (spec §10). */

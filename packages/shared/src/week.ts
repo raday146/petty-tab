@@ -37,12 +37,19 @@ function nextTurnover(t: Date, tz: string): Date {
 }
 
 /**
- * spec §10: where a cycle that starts at `start` ends by default: the first Sunday 20:00 in `tz` at least
- * 48 hours later. A new pair's first week, the week after every verdict, and the one after a settle.
+ * spec §10: where a cycle that starts at `start` ends by the pair's rule. Weekly (`cycleDays` null): the first
+ * Sunday 20:00 in `tz` at least 48 hours later. Every N days: 20:00 on the Nth local day after `start`.
+ * Used for a new pair's first cycle, the cycle after every verdict, and the one after a settle.
  */
-export function firstCycleEnd(start: Date, tz: string): Date {
-  return nextTurnover(new Date(start.getTime() + MIN_CYCLE_MS), tz);
+export function cycleEnd(start: Date, tz: string, cycleDays: number | null = null): Date {
+  if (cycleDays === null) return nextTurnover(new Date(start.getTime() + MIN_CYCLE_MS), tz);
+  const { y, m, d } = wall(start, tz);
+  return turnover(y, m, d + cycleDays, tz);
 }
+
+/** spec §10: the cycle lengths a pair can pick besides weekly. */
+export const CYCLE_DAYS = [3, 5] as const;
+export type CycleDays = (typeof CYCLE_DAYS)[number] | null;
 
 /**
  * spec §10: the cycle `now` falls in. The pair stores its current cycle; once that has ended (the sealer
@@ -52,9 +59,10 @@ export function cycleAt(
   stored: { start: Date; end: Date },
   tz: string,
   now: Date,
+  cycleDays: number | null = null,
 ): { start: Date; end: Date } {
   let cycle = stored;
-  while (cycle.end <= now) cycle = { start: cycle.end, end: firstCycleEnd(cycle.end, tz) };
+  while (cycle.end <= now) cycle = { start: cycle.end, end: cycleEnd(cycle.end, tz, cycleDays) };
   return cycle;
 }
 
