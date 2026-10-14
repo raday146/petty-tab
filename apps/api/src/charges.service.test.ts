@@ -70,22 +70,13 @@ describe('filing (spec §8)', () => {
     expect(await code(service.file(await newUser(), { crimeKey: 'sip' }))).toBe('not_in_pair');
   });
 
-  it('refuses the 11th charge in 24 hours, and allows it once the first is a day old', async () => {
+  it('has no daily cap: the 11th charge in an hour is filed', async () => {
     const { a } = await pair();
     for (let i = 0; i < 10; i++) {
       await file(a);
       later(60_000);
     }
-    expect(await code(service.file(a, { crimeKey: 'sip' }))).toBe('rate_limited');
-    now = new Date('2026-10-13T10:00:00.001Z');
     expect(await code(service.file(a, { crimeKey: 'sip' }))).toBe('ok');
-  });
-
-  it('does not count undone charges toward the limit', async () => {
-    const { a } = await pair();
-    for (let i = 0; i < 10; i++) await service.undo(a, await file(a));
-    for (let i = 0; i < 10; i++) await file(a);
-    expect(await code(service.file(a, { crimeKey: 'sip' }))).toBe('rate_limited');
   });
 });
 

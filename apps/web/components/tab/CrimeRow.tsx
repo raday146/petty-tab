@@ -17,6 +17,15 @@ const FACE: Record<ChargeStatus, Face> = {
   dropped: 'plain',
 };
 
+/** The status in the UI's words (spec §8 "Who sees what"), for the screen-reader text. */
+const SAY: Record<ChargeStatus, string> = {
+  pending: 'pending',
+  guilty: 'guilty',
+  upheld: 'counts',
+  appealed: 'disputed',
+  dropped: 'let slide',
+};
+
 export interface Charge {
   id: string;
   crime: CrimeKey;
@@ -43,12 +52,12 @@ export function CrimeRow({ charge, accused, isNew, slam, inCard }: Props): React
       <b className={cx(s.title, status === 'dropped' && s.dropped)}>
         {crime.title}
         <span className="sr-only">
-          , <bdi>{accused.name}</bdi>, {status}
+          , <bdi>{accused.name}</bdi>, {SAY[status]}
         </span>
       </b>
       <span className={s.end}>
         {status === 'appealed' ? (
-          <span className={s.appealedPill}>Appealed</span>
+          <span className={s.appealedPill}>Disputed</span>
         ) : status === 'dropped' ? null : (
           <Pill unit={crime.unit} onButter={inCard} />
         )}

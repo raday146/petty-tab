@@ -446,3 +446,82 @@ Notes from M7:
   3. Backups stay on the server for 14 days, restore-checked every night, with no offsite copy (offsite deferred
      to after launch); renders on local disk.
   4. No hosted error tracker for launch; rotated Docker logs only.
+
+## Phone-test polish (between M7 and M8)
+Status: in review (`feat/phone-ux`), asked for by the owner on 2026-10-14 after the two-phone test
+
+- [x] Only the list scrolls; the page does not bounce on iOS; **Log a petty crime** is a footer under the list,
+      so it never covers a charge (`Tab.module.css`, `globals.css`; reference screenshots 06 and 08 in the
+      e2e report)
+- [x] The scoreboard keeps the avatars, the rope and the lead; "Who owes what" opens the tally sheet
+      (`e2e/tab.spec.ts` "A files Trash Jenga, B pleads guilty live, A sees the stamp and the score bump")
+- [x] Couple banter instead of court words, on screen and in pushes (spec §8, §10, §12; design.md §5, §6, §9;
+      `notify.test.ts`, `push.service.test.ts`, `e2e/tab.spec.ts`)
+- [x] The filer's card says "<accused> is disputing this! What's the call?" above Nice try / Let it slide
+      (`e2e/tab.spec.ts` "B cries foul, A sees the card live…")
+- [x] A "?" in the header opens How it works, the three-step loop (`e2e/screens.spec.ts` "the ? opens How it
+      works")
+- [x] No daily filing limit; the M7 guard of 60 writes a minute stays (spec §8 and Open decision 7;
+      `charges.service.test.ts` "has no daily cap", `e2e/tab.spec.ts` "there is no daily cap")
+- Reference screens 06, 08–10 and 15 still show the owed pills and the floating button; those screenshot tests
+  now compare the header and the score card's top row only (`BELOW_DUEL` in `e2e/screens.spec.ts`).
+
+## M8 · Flexible verdicts (proposal, not started)
+Status: proposal for the owner; nothing built. Opens spec Open decision 3 (verdict time).
+
+The owner's rule: a pair chooses its cycle (3, 5 or 7 days) and its verdict time (weekday and hour), and an
+active deadline only moves when both agree.
+
+Proposed rules (spec §10 would change with them):
+- A pair has a schedule: `cycle_days` (3, 5 or 7; default 7) and `verdict_time` (local hour and minute;
+  default 20:00). A 7-day cycle keeps a weekday; shorter cycles just run from one verdict to the next.
+- Either member can propose a new schedule. The proposal is `pending_partner_approval` until the partner
+  accepts or declines; one open proposal per pair. Nothing moves until both have said yes (the proposer's
+  yes is the proposal itself).
+- The partner sees a card on the tab, "Maya is moving the goalposts!" with the old and new deadline and
+  **Deal** / **Nope**, plus a push. The proposer can withdraw it. An open proposal expires at the current
+  deadline.
+- On accept, the current cycle's end moves to the next occurrence of the new verdict time that is at least
+  the cycle's minimum away (today's 48-hour rule, scaled to `min(48 h, cycle)`). Charges already filed stay in
+  the cycle. A deadline cannot move into the past or within the next hour.
+
+How it fits the code:
+- Today weeks are derived, not stored: `currentWeek(joinedAt, tz, now)` in `packages/shared/src/week.ts`.
+  Once the schedule can change mid-history, derivation from the join time breaks, so the pair stores its
+  current cycle: `pairs.cycle_start`, `pairs.cycle_end`, `cycle_days`, `verdict_time`. Past cycles already
+  live on their verdicts (`week_start`, `week_end`), and charges keep `week_start`.
+- Pure functions in `packages/shared` (tests first): `nextCycleEnd(start, schedule, tz)`,
+  `proposalTransition(state, actor, action)`, and `currentWeek` reading the stored cycle. The sealing job
+  seals when `cycle_end` has passed, then writes the next cycle in the same transaction (still idempotent).
+- One table, `schedule_proposals` (`pair_id`, `proposer_id`, `cycle_days`, `verdict_time`, `status`,
+  `created_at`, `decided_at`), with a partial unique index for one pending proposal per pair. Endpoints:
+  `POST /schedule/proposals`, `POST /schedule/proposals/:id/accept|decline|withdraw`. SSE events
+  `schedule.proposed` and `schedule.decided`; pushes through the existing `pushText`.
+- The UI reads the deadline from `/tab` (it already returns the week), so the chip ("Verdict Friday 21:00")
+  and the reminders follow the stored cycle with no copy hard-coded to Sunday.
+
+Decided by the owner on 2026-10-14:
+1. An accepted change moves the **current** deadline at once (within the limits above).
+2. The winner can change the sentence until their first share or 24 hours after the verdict, for every cycle
+   length (replaces "Monday 20:00"; `sentenceDeadline` in `week.ts`).
+3. The sentence reminder goes out at the halfway point of the cycle (replaces Wednesday 19:00;
+   `lastReminderTime` in `week.ts`).
+
+Next: plan mode for M8 (its "done when" list and steps) before any code.
+
+### Product ideas for M8 and later (for the owner to pick)
+1. **Custom crimes.** The pair adds its own crimes (title, one line, a unit from the catalog, a sticker
+   picked from the art package). A `custom_crimes` table per pair; charges reference a catalog key or a
+   custom id. Names and titles never enter `packages/art` (CLAUDE.md); the sticker is a catalog key. Lifts
+   "Custom crimes" from spec §15.
+2. **Photo evidence.** An optional photo on a charge ("exhibit A: the carton"), resized in the browser and
+   stored next to the renders, served through the existing short-lived signed file URLs and deleted with the
+   pair's 30-day purge. Shown on the plea card only, never on the shared card or reel.
+3. **Bargains.** Instead of "Fine, I did it" or "Not me!", the accused offers a deal ("I'll do the dishes
+   tonight"); the filer takes it (the charge drops, with the deal shown on its row) or refuses it (back to
+   pending). One new state and two actions in `transition()` in `packages/shared/src/charges.ts`.
+4. **Rap sheet.** All-time stats from sealed verdicts: each person's most-charged crime, win streaks, "repeat
+   offender" badges. Read-only queries over `verdicts` and `charges` (the verdict snapshots already hold
+   names and counts); one new screen from the name chip.
+5. **Double or nothing.** On the verdict, the loser can call a rematch: if they win the next cycle the debt is
+   cancelled, if they lose the sentence doubles. One field on the verdict and a branch in the sealing step.

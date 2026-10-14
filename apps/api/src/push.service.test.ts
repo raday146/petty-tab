@@ -68,11 +68,11 @@ describe('the events of spec §12', () => {
     await charges.plead(b, await file(a, 'trash'), { plea: 'guilty' });
 
     expect(to(ma).slice(1)).toEqual([
-      'Alex appeals: Trash Jenga. Your call.',
-      'Alex appeals: The Phantom Sip. Your call.',
-      'Alex pleads guilty.',
+      'Alex cries foul: Trash Jenga. Your call.',
+      'Alex cries foul: The Phantom Sip. Your call.',
+      'Alex owned it.',
     ]);
-    expect(to(mb)).toEqual(['Maya upheld it.', 'Maya dropped it.']);
+    expect(to(mb)).toEqual(['Maya says nice try. It counts.', 'Maya let it slide.']);
   });
 
   it('sends nothing when 24 hours of silence make a charge guilty', async () => {
@@ -91,10 +91,10 @@ describe('the events of spec §12', () => {
     sent = [];
     now = at('2026-10-18T17:00:00Z');
     await verdicts.sealDue();
-    expect(to(won.ma)).toEqual(['Court is adjourned. You won the week.']);
+    expect(to(won.ma)).toEqual(['You won the week. Gloat responsibly.']);
     expect(to(won.mb)).toEqual(['The verdict is in.']);
-    expect(to(tie.ma)).toEqual(['Dead even this week. The court is impressed.']);
-    expect(to(tie.mb)).toEqual(['Dead even this week. The court is impressed.']);
+    expect(to(tie.ma)).toEqual(['Dead even this week. Suspiciously wholesome.']);
+    expect(to(tie.mb)).toEqual(['Dead even this week. Suspiciously wholesome.']);
     await verdicts.sealDue();
     expect(to(won.ma)).toHaveLength(1);
   });
@@ -161,9 +161,9 @@ describe('delivery', () => {
       if (sub.endpoint === gone) throw Object.assign(new Error('Gone'), { statusCode: 410 });
       delivered.push([sub.endpoint, payload]);
     };
-    await fake.deliver({ memberId: ma, body: 'Alex pleads guilty.' });
+    await fake.deliver({ memberId: ma, body: 'Alex owned it.' });
     expect(delivered).toEqual([
-      [live, JSON.stringify({ title: 'Petty Tab', body: 'Alex pleads guilty.', url: '/' })],
+      [live, JSON.stringify({ title: 'Petty Tab', body: 'Alex owned it.', url: '/' })],
     ]);
     expect(await prisma.pushSub.count({ where: { endpoint: gone } })).toBe(0);
 

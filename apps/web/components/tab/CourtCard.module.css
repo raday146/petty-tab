@@ -11,6 +11,14 @@
   gap: 8px;
   margin-top: 6px;
 }
+/* The filer's card: the question on its own line above the two answers, so it reads in context. */
+.ask.stacked {
+  flex-wrap: wrap;
+}
+.ask.stacked p {
+  flex-basis: 100%;
+  margin-bottom: 4px;
+}
 .ask p {
   flex: 1;
   min-width: 0;

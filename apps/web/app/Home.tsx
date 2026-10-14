@@ -413,7 +413,7 @@ function StayInTheLoop({ partner }: { partner: string }): ReactNode {
       title="Know when you're charged"
       lead={
         <>
-          A ping when <bdi>{partner}</bdi> files a charge or pleads, and when the verdict is in.
+          A ping when <bdi>{partner}</bdi> logs a crime or cries foul, and when the verdict is in.
         </>
       }
     >

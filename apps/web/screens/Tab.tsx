@@ -21,7 +21,7 @@ import { Toast, useToast } from '@/components/Toast';
 import { CourtCard } from '@/components/tab/CourtCard';
 import { CrimeRow } from '@/components/tab/CrimeRow';
 import { CrimeTile } from '@/components/tab/CrimeTile';
-import { Scoreboard, type Member, type Owed } from '@/components/tab/Scoreboard';
+import { Scoreboard, Tally, type Member, type Owed } from '@/components/tab/Scoreboard';
 import { ApiFailure } from '@/lib/api';
 import { sfx } from '@/lib/sfx';
 import { InviteLink } from './InviteSheet';
@@ -59,6 +59,8 @@ const SLAM_MS = 1900;
 export function Tab(props: Props): ReactNode {
   const { me, them, inviteLink, firstVerdictDay, charges } = props;
   const [logOpen, setLogOpen] = useState(false);
+  const [tallyOpen, setTallyOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
   const [fresh, setFresh] = useState<string>();
   const [slam, setSlam] = useState<string>();
   const [bump, setBump] = useState<{ unit: UnitKey; n: number }>();
@@ -109,12 +111,12 @@ export function Tab(props: Props): ReactNode {
     try {
       id = await props.onFile!(crime);
     } catch (e) {
-      // spec §8: the 11th charge in 24 hours.
+      // M7's guard: more than 60 writes in a minute.
       if (e instanceof ApiFailure && e.code === 'rate_limited') {
         setUndoable(undefined);
         show({
-          title: 'The court needs a break',
-          message: 'Ten charges in a day is plenty. Try again tomorrow.',
+          title: 'Easy, tiger',
+          message: "That's a lot of crimes for one minute. Try again in a moment.",
         });
       }
       return;
@@ -135,9 +137,9 @@ export function Tab(props: Props): ReactNode {
     stamp(id);
     show(
       plea === 'guilty'
-        ? { title: 'You plead guilty', message: 'No contest.' }
+        ? { title: 'You owned it', message: 'Respect.' }
         : {
-            title: 'You appeal',
+            title: 'You cried foul',
             message: (
               <>
                 <bdi>{them.name}</bdi> decides.
@@ -165,6 +167,9 @@ export function Tab(props: Props): ReactNode {
     <Screen ref={screen} className={s.screen} aria-label="The tab">
       <Toast toast={toast} onHide={hide} />
       <div className={s.head}>
+        <button type="button" className={s.help} aria-label="How it works" onClick={() => setHelpOpen(true)}>
+          ?
+        </button>
         {props.onEdit && (
           <NameChip className={s.me} name={me.name} species={me.species} onClick={props.onEdit} />
         )}
@@ -190,14 +195,7 @@ export function Tab(props: Props): ReactNode {
             </button>
           </section>
         ) : (
-          <Scoreboard
-            me={me}
-            them={them}
-            lead={props.lead}
-            meOwed={props.meOwed}
-            themOwed={props.themOwed}
-            bump={bump}
-          />
+          <Scoreboard me={me} them={them} lead={props.lead} bump={bump} onOpen={() => setTallyOpen(true)} />
         )}
         {props.unconfirmed?.map((u, i) => (
           <p key={i} className={s.owes}>
@@ -257,6 +255,9 @@ export function Tab(props: Props): ReactNode {
               </Button>
             </div>
           )}
+          <Sheet open={tallyOpen} onClose={() => setTallyOpen(false)} title="Who owes what">
+            <Tally me={me} them={them} meOwed={props.meOwed} themOwed={props.themOwed} bump={bump} />
+          </Sheet>
           <Sheet
             open={logOpen}
             onClose={() => setLogOpen(false)}
@@ -274,6 +275,23 @@ export function Tab(props: Props): ReactNode {
           </Sheet>
         </>
       )}
+      <Sheet open={helpOpen} onClose={() => setHelpOpen(false)} title="How it works">
+        <ol className={s.steps}>
+          <li>
+            <b>Log a slip-up.</b> Three drops of milk left in the carton? Log it. Every crime adds a coffee, a
+            dish load or a foot rub to what <bdi>{them.name}</bdi> owes you.
+          </li>
+          <li>
+            <b>Own it or dispute it.</b> The accused taps &ldquo;Fine, I did it&rdquo; or &ldquo;Not
+            me!&rdquo;. Disputed? The one who logged it makes the call. Silence for a day counts as owning it.
+          </li>
+          <li>
+            <b>Sunday verdict.</b> At 20:00 the week seals. Whoever was charged more is found guilty and owes
+            a sentence. Share the card, then start fresh at 0&ndash;0.
+          </li>
+        </ol>
+        <Button onClick={() => setHelpOpen(false)}>Got it</Button>
+      </Sheet>
     </Screen>
   );
 }

@@ -135,9 +135,9 @@ so both members have a way to earn foot rubs. Custom crimes are out of scope for
 - **Undo**: the filer can undo for 10 seconds from the filing toast's **Undo** action. Undo hard-deletes the
   charge, sends `charge.deleted` over SSE so it disappears from the accused's screen, and cancels the held
   push. Undo is refused once the accused has pleaded (the toast's Undo disappears when `plea.*` arrives).
-- Limit: 10 charges per filer per rolling 24 hours, counting charges that still exist (undone charges do not
-  count). The 11th is refused with a friendly message: "The court needs a break" / "Ten charges in a day is
-  plenty. Try again tomorrow." (approved by the owner on 2026-10-12).
+- No daily limit (the owner removed the 10-a-day cap on 2026-10-14 after the phone test). The general write
+  limit of M7 (60 writes a minute per session) still applies; a refused filing shows "Easy, tiger" / "That's a
+  lot of crimes for one minute. Try again in a moment."
 
 ### States
 
@@ -161,12 +161,15 @@ pending ──plead guilty──▶ guilty
 
 | Charge state | The accused sees | The filer sees |
 | --- | --- | --- |
-| `pending` | A plea card: "<filer> says you did this." with **Guilty** / **Appeal** | A row with the accused's `plain` face and the pill; no buttons |
-| `appealed` | A row with their own `smug` face; "Appealed" in place of the pill | An appeal card: "<accused> appeals." with **Uphold** / **Drop** |
+| `pending` | A plea card: "<filer> says you did this." with **Fine, I did it** (guilty) / **Not me!** (appeal) | A row with the accused's `plain` face and the pill; no buttons |
+| `appealed` | A row with their own `smug` face; "Disputed" in place of the pill | A card: "<accused> is disputing this! What's the call?" above **Nice try** (uphold) / **Let it slide** (drop) |
 | `guilty`, `upheld` | A row with their `sad` face and the pill | Same row |
 | `dropped` | A row with their `plain` face, the title muted, no pill | Same row |
 
-Copy on each side never names the viewer in the third person: the accused's own card says "Maya says you did
+The UI speaks in couple banter, not court language (owner, 2026-10-14): the states keep their names in the
+data and the API, but screens and pushes say "cries foul", "Disputed", "Nice try", "Let it slide". The
+screen-reader status reads pending, guilty, disputed, counts (upheld) or let slide (dropped). Copy on each
+side never names the viewer in the third person: the accused's own card says "Maya says you did
 this.", never "Alex pleads…". The prototype's plea card (reference screens 08 and 09) is drawn from the
 filer's phone with the accused's buttons; treat it as the accused's card with the names swapped.
 
@@ -200,15 +203,15 @@ Worked examples (the unit tests must include these):
      `resolved_at` set to `week_end`.
   2. Points are computed (§9). The member with more points is the **winner**; the other is **guilty**.
   3. **Tie** (including a week with no charges): no one is guilty. The verdict is "Dead even": no sentence, a calmer card, no reel. Push to both:
-     "Dead even this week. The court is impressed."
+     "Dead even this week. Suspiciously wholesome."
   4. Top crimes: the three crime keys with the most counting charges against the loser, ties broken by the
      most recent charge. They are stored as crime keys; when drawing, pass the catalog's sticker key (§6:
      `dj` draws as `tape`), never the crime key.
   5. A sentence is pre-selected at random (seeded by the verdict id so renders are reproducible).
   6. The verdict is stored with a snapshot of names, animals, counts and top crimes, so later renames do not
      change it.
-  7. A card render and a reel render are queued (§11). Both members get a push (if enabled): the winner "Court
-     is adjourned. You won the week." and the loser "The verdict is in."
+  7. A card render and a reel render are queued (§11). Both members get a push (if enabled): the winner "You won
+     the week. Gloat responsibly." and the loser "The verdict is in."
 - The winner can change the sentence until they first share the verdict or until Monday 20:00, whichever comes
   first. After that it is locked. "Share" means the winner tapped any share or download control on the
   verdict or story screen: the client calls `POST /verdicts/:id/shared` before opening the share sheet, which
@@ -253,8 +256,8 @@ On iPhone this only works once the app is added to the Home Screen; the prompt s
 | --- | --- | --- |
 | Partner joined | inviter | "<B> joined as <animal name>." |
 | New charge | accused | "<filer> filed: <crime title>." |
-| Plea | filer | "<accused> pleads guilty." / "<accused> appeals: <crime title>. Your call." |
-| Appeal decided | accused | "<filer> upheld it." / "<filer> dropped it." |
+| Plea | filer | "<accused> owned it." / "<accused> cries foul: <crime title>. Your call." |
+| Appeal decided | accused | "<filer> says nice try. It counts." / "<filer> let it slide." |
 | Verdict sealed | both | winner / loser / tie texts in §10 |
 | Sentence reminder | loser | Wednesday 19:00 local, while a sentence is unconfirmed |
 
@@ -336,5 +339,5 @@ OAuth, a Hebrew UI (names in Hebrew are supported), native apps, ads.
 | 4 | Tie | "Dead even" card (layout in `design.md` §6), no sentence, no reel (approved by the owner on 2026-10-12). A week with no charges seals as "Dead even" too. |
 | 5 | How long can the winner change the sentence? | Until first share or Monday 20:00 (approved by the owner on 2026-10-12). |
 | 6 | Account recovery when the cookie is lost | None in v1. Candidate for v1.1: a recovery link the user saves, or an emailed magic link. |
-| 7 | Filing limit | 10 charges per filer per rolling 24 hours. |
+| 7 | Filing limit | None (decided by the owner on 2026-10-14); only the 60 writes a minute guard of M7. |
 | 8 | Monetisation | None in v1. Earlier direction: cosmetic extras ($0.99–$4.99) such as more sentences or animal outfits. |

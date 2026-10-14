@@ -21,19 +21,21 @@ interface Props {
   themOwed: Owed;
   /** A unit on my side that just went up; a new `n` replays the bump. */
   bump?: { unit: UnitKey; n: number };
+  /** Opens the tally sheet (who owes what), which keeps the card itself light. */
+  onOpen: () => void;
 }
 
-export function Scoreboard({ me, them, lead, meOwed, themOwed, bump }: Props): ReactNode {
+export function Scoreboard({ me, them, lead, bump, onOpen }: Omit<Props, 'meOwed' | 'themOwed'>): ReactNode {
   const leader = lead > 0 ? me : them;
   return (
-    <section className={s.score} aria-label="Score">
+    <button type="button" className={s.score} aria-haspopup="dialog" onClick={onOpen}>
       <div className={s.duel}>
         <Player member={me} face={lead === 0 ? 'plain' : lead > 0 ? 'smug' : 'strain'} dir={1} />
         <div className={s.mid}>
           <div className={s.rope} aria-hidden="true">
             <b className={s.marker} style={{ left: `${ropePosition(lead)}%` }} />
           </div>
-          <p className={s.lead}>
+          <p key={bump?.n} className={cx(s.lead, bump && s.bump)}>
             {lead === 0 ? (
               'Dead even'
             ) : (
@@ -45,11 +47,18 @@ export function Scoreboard({ me, them, lead, meOwed, themOwed, bump }: Props): R
         </div>
         <Player member={them} face={lead === 0 ? 'plain' : lead < 0 ? 'smug' : 'strain'} dir={-1} />
       </div>
-      <div className={s.owed}>
-        <OwedList member={me} owed={meOwed} bump={bump} />
-        <OwedList member={them} owed={themOwed} />
-      </div>
-    </section>
+      <span className={s.more}>Who owes what</span>
+    </button>
+  );
+}
+
+/** The tally sheet's body: what each member is owed this week, by unit (spec §9). */
+export function Tally({ me, them, meOwed, themOwed, bump }: Omit<Props, 'lead' | 'onOpen'>): ReactNode {
+  return (
+    <div className={s.owed}>
+      <OwedList member={me} owed={meOwed} bump={bump} />
+      <OwedList member={them} owed={themOwed} />
+    </div>
   );
 }
 
