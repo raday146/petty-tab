@@ -186,3 +186,59 @@ button.chip:active {
 .steps li + li {
   margin-top: 12px;
 }
+/* The deadline sheet (spec §10): settle now, quick moves, a picked time, the last verdict. */
+.when {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.when p {
+  margin: 4px 0 0;
+  color: var(--mute);
+  font-size: 15px;
+}
+.quick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.quick button,
+.pick button {
+  height: 40px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--paper);
+  color: var(--ink);
+  font-weight: 600;
+  box-shadow: inset 0 0 0 1.5px var(--ink);
+}
+.quick button:active,
+.pick button:active {
+  transform: scale(0.95);
+  background: var(--mustard);
+}
+.pick {
+  display: flex;
+  gap: 8px;
+}
+.pick input {
+  flex: 1;
+  min-width: 0;
+  height: 40px;
+  padding-inline: 12px;
+  border: 1.5px solid var(--ink);
+  border-radius: 14px;
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+}
+.last {
+  display: block;
+  margin: 16px auto 0;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font-weight: 600;
+  text-decoration: underline;
+}

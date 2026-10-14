@@ -9,6 +9,7 @@ const live = { timeout: 2000 };
 
 const open = async (page: Page): Promise<void> => {
   await page.getByRole('button', { name: 'Verdict on Sunday' }).click(live);
+  await page.getByRole('button', { name: 'See the last verdict' }).click();
   await page.addStyleTag({ content: 'nextjs-portal { display: none !important; }' });
   await page.evaluate(() => document.fonts.ready);
 };
