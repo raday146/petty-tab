@@ -1,11 +1,10 @@
 import { z } from 'zod';
 import { SPECIES, type Species } from '@petty-tab/art';
 import { CRIMES, SENTENCES, type CrimeKey, type SentenceKey } from './catalog.ts';
-import { lastReminderTime } from './week.ts';
+import { reminderTime } from './week.ts';
 
 /** spec §12: charge pushes to the same person within this window go out as one. */
 export const PUSH_BATCH_MS = 2 * 60 * 1000;
-const CATCH_UP_MS = 24 * 60 * 60 * 1000;
 
 export type PushEvent =
   | { type: 'joined'; name: string; species: Species }
@@ -13,7 +12,10 @@ export type PushEvent =
   | { type: 'plea.appeal'; name: string; crimeKey: CrimeKey }
   | { type: 'appeal.upheld' | 'appeal.dropped'; name: string }
   | { type: 'verdict.won' | 'verdict.lost' | 'verdict.tie' }
-  | { type: 'reminder'; name: string; sentenceKey: SentenceKey };
+  | { type: 'reminder'; name: string; sentenceKey: SentenceKey }
+  | { type: 'settle.proposed'; name: string }
+  | { type: 'move.proposed' | 'move.accepted'; name: string; when: string }
+  | { type: 'proposal.declined'; name: string; settle: boolean };
 
 /** The push texts of spec §12 (verdict texts from §10). `name` is the other member. */
 export function pushText(e: PushEvent): string {
@@ -37,6 +39,14 @@ export function pushText(e: PushEvent): string {
     case 'reminder':
       // Default wording (spec §12 gives none), flagged in plan.md M6.
       return `You still owe ${e.name}: ${SENTENCES[e.sentenceKey].title}.`;
+    case 'settle.proposed':
+      return `${e.name} wants to settle the tab right now! Ready to face the verdict?`;
+    case 'move.proposed':
+      return `${e.name} is moving the goalposts: verdict ${e.when}. Deal?`;
+    case 'proposal.declined':
+      return `${e.name} says ${e.settle ? 'not yet' : 'nope'}.`;
+    case 'move.accepted':
+      return `${e.name} agreed. Verdict ${e.when}.`;
   }
 }
 
@@ -52,16 +62,17 @@ export function chargePushText(filer: string, crimes: CrimeKey[]): string {
 }
 
 /**
- * spec §12: the loser's reminder is due from Wednesday 19:00 local while the sentence is unconfirmed, once
- * per Wednesday, for Wednesdays after the seal. A sweep that was down catches up within a day.
+ * spec §12: the loser's reminder is due once per cycle, from the cycle's halfway point until it ends, while
+ * the sentence is unconfirmed. `cycle` is the pair's current cycle; a halfway point before the seal is skipped.
  */
-export function reminderDue(sealedAt: Date, remindedAt: Date | null, tz: string, now: Date): boolean {
-  const wednesday = lastReminderTime(tz, now);
-  return (
-    wednesday > sealedAt &&
-    now.getTime() - wednesday.getTime() < CATCH_UP_MS &&
-    (!remindedAt || remindedAt < wednesday)
-  );
+export function reminderDue(
+  sealedAt: Date,
+  remindedAt: Date | null,
+  cycle: { start: Date; end: Date },
+  now: Date,
+): boolean {
+  const halfway = reminderTime(cycle);
+  return halfway > sealedAt && now >= halfway && (!remindedAt || remindedAt < cycle.start);
 }
 
 /**

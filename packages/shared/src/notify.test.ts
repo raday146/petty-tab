@@ -18,6 +18,17 @@ describe('pushText (spec §12, §10)', () => {
     expect(pushText({ type: 'reminder', name: 'Maya', sentenceKey: 'coffee7' })).toBe(
       'You still owe Maya: 7 days of morning coffee duty.',
     );
+    expect(pushText({ type: 'settle.proposed', name: 'Maya' })).toBe(
+      'Maya wants to settle the tab right now! Ready to face the verdict?',
+    );
+    expect(pushText({ type: 'move.proposed', name: 'Maya', when: 'Fri 21:00' })).toBe(
+      'Maya is moving the goalposts: verdict Fri 21:00. Deal?',
+    );
+    expect(pushText({ type: 'proposal.declined', name: 'Alex', settle: true })).toBe('Alex says not yet.');
+    expect(pushText({ type: 'proposal.declined', name: 'Alex', settle: false })).toBe('Alex says nope.');
+    expect(pushText({ type: 'move.accepted', name: 'Alex', when: 'Fri 21:00' })).toBe(
+      'Alex agreed. Verdict Fri 21:00.',
+    );
   });
 });
 
@@ -36,36 +47,25 @@ describe('chargePushText (spec §12 batching)', () => {
   });
 });
 
-// 2026-10-21 is a Wednesday. Jerusalem is UTC+3 then; New York UTC-4; Auckland UTC+13.
-describe('reminderDue (spec §12: Wednesday 19:00 local)', () => {
-  const sealed = at('2026-10-18T17:05:00Z'); // Sunday after 20:00 Jerusalem
+describe('reminderDue (spec §12: once per cycle, from its halfway point)', () => {
+  const sealed = at('2026-10-18T17:05:00Z');
+  const cycle = { start: at('2026-10-18T17:00:00Z'), end: at('2026-10-25T18:00:00Z') }; // halfway 22 Oct 05:30Z
 
-  it('is due from Wednesday 19:00 local, not a second before', () => {
-    expect(reminderDue(sealed, null, 'Asia/Jerusalem', at('2026-10-21T15:59:59Z'))).toBe(false);
-    expect(reminderDue(sealed, null, 'Asia/Jerusalem', at('2026-10-21T16:00:00Z'))).toBe(true);
-    expect(reminderDue(sealed, null, 'America/New_York', at('2026-10-21T23:00:00Z'))).toBe(true);
-    expect(reminderDue(sealed, null, 'America/New_York', at('2026-10-21T22:59:00Z'))).toBe(false);
-    expect(
-      reminderDue(at('2026-10-18T07:05:00Z'), null, 'Pacific/Auckland', at('2026-10-21T06:00:00Z')),
-    ).toBe(true);
+  it('is due from the halfway point, not a second before, and catches up until the cycle ends', () => {
+    expect(reminderDue(sealed, null, cycle, at('2026-10-22T05:29:59Z'))).toBe(false);
+    expect(reminderDue(sealed, null, cycle, at('2026-10-22T05:30:00Z'))).toBe(true);
+    expect(reminderDue(sealed, null, cycle, at('2026-10-25T17:59:00Z'))).toBe(true);
   });
 
-  it('is sent once per Wednesday, and again the next Wednesday', () => {
-    const sent = at('2026-10-21T16:10:00Z');
-    expect(reminderDue(sealed, sent, 'Asia/Jerusalem', at('2026-10-21T16:20:00Z'))).toBe(false);
-    // The next Wednesday is after the DST change: 19:00 local is 17:00 UTC.
-    expect(reminderDue(sealed, sent, 'Asia/Jerusalem', at('2026-10-28T16:59:00Z'))).toBe(false);
-    expect(reminderDue(sealed, sent, 'Asia/Jerusalem', at('2026-10-28T17:00:00Z'))).toBe(true);
+  it('is sent once per cycle, and again in the next one', () => {
+    const sent = at('2026-10-22T05:40:00Z');
+    expect(reminderDue(sealed, sent, cycle, at('2026-10-24T00:00:00Z'))).toBe(false);
+    const next = { start: cycle.end, end: at('2026-11-01T18:00:00Z') };
+    expect(reminderDue(sealed, sent, next, at('2026-10-29T06:00:00Z'))).toBe(true);
   });
 
-  it('catches up within a day, then waits for the next Wednesday', () => {
-    expect(reminderDue(sealed, null, 'Asia/Jerusalem', at('2026-10-22T15:59:00Z'))).toBe(true);
-    expect(reminderDue(sealed, null, 'Asia/Jerusalem', at('2026-10-22T16:00:00Z'))).toBe(false);
-  });
-
-  it('skips a Wednesday that came before the verdict was sealed', () => {
-    const late = at('2026-10-21T17:00:00Z');
-    expect(reminderDue(late, null, 'Asia/Jerusalem', at('2026-10-21T18:00:00Z'))).toBe(false);
+  it('skips a halfway point that came before the verdict was sealed', () => {
+    expect(reminderDue(at('2026-10-23T00:00:00Z'), null, cycle, at('2026-10-23T01:00:00Z'))).toBe(false);
   });
 });
 

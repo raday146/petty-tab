@@ -2,6 +2,7 @@ import { rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { Injectable } from '@nestjs/common';
 import {
+  firstCycleEnd,
   INVITE_TTL_MS,
   inviteStatus,
   pushText,
@@ -129,7 +130,10 @@ export class PairingService {
     try {
       const pairId = await this.prisma.$transaction(async (tx) => {
         if (await tx.member.findFirst({ where: { userId, pair: { endedAt: null } } })) throw alreadyInPair();
-        const invite = await tx.invite.findUnique({ where: { tokenHash: sha256(token) } });
+        const invite = await tx.invite.findUnique({
+          where: { tokenHash: sha256(token) },
+          include: { pair: true },
+        });
         // Single use: only one accept can flip used_at, so a pair never gets a third member.
         const consumed = invite
           ? await tx.invite.updateMany({
@@ -152,6 +156,11 @@ export class PairingService {
             species: body.species,
             joinedAt: now,
           },
+        });
+        // spec §10: the first cycle starts now.
+        await tx.pair.update({
+          where: { id: invite.pairId },
+          data: { cycleStart: now, cycleEnd: firstCycleEnd(now, invite.pair.timezone) },
         });
         return invite.pairId;
       });
