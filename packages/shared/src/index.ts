@@ -4,6 +4,6 @@ export * from './rng.ts';
 export * from './identity.ts';
 export * from './charges.ts';
 export * from './week.ts';
-export type { Species } from '@petty-tab/art';
+export type { Species, StickerKey } from '@petty-tab/art';
 export * from './verdict.ts';
 export * from './notify.ts';

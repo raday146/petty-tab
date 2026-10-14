@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
   checkProposedEnd,
+  choreDaysDue,
+  dayEnd,
+  localDay,
   cycleAt,
   deadlineLabel,
   firstCycleEnd,
@@ -97,5 +100,19 @@ describe('cycleAt (spec §10: charges freeze at the deadline, before the sealer 
       start: next.end,
       end: at('2026-11-08T18:00:00Z'),
     });
+  });
+});
+
+describe('chore days (spec §8: a chore day ends at local midnight)', () => {
+  it('reads the local date and its midnight, across the DST change', () => {
+    expect(localDay(at('2026-10-24T21:30:00Z'), tz)).toBe('2026-10-25'); // 00:30 local
+    expect(dayEnd('2026-10-24', tz)).toEqual(at('2026-10-24T21:00:00Z')); // UTC+3
+    expect(dayEnd('2026-10-25', tz)).toEqual(at('2026-10-25T22:00:00Z')); // UTC+2
+  });
+  it('is due for the last two ended days after the creation day, oldest first', () => {
+    const created = at('2026-10-20T12:00:00Z'); // Tuesday 15:00 local
+    expect(choreDaysDue(created, tz, at('2026-10-20T22:00:00Z'))).toEqual([]); // Wednesday 01:00: Tue was creation day
+    expect(choreDaysDue(created, tz, at('2026-10-21T21:00:00Z'))).toEqual(['2026-10-21']);
+    expect(choreDaysDue(created, tz, at('2026-10-24T09:00:00Z'))).toEqual(['2026-10-22', '2026-10-23']);
   });
 });
