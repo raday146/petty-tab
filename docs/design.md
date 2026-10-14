@@ -125,10 +125,20 @@ prototype's "Invite your partner" button and pre-filled name chip are placeholde
 - A sticky footer fades in from the linen: **Continue as <bdi>Maya</bdi> the Cat**.
 
 ### The Tab (`06`–`10`, `15`)
-- Title "The Tab" and a paper chip "Verdict on Sunday" (gavel icon, knocks every few seconds) that opens the
-  latest verdict. Before the first verdict it is a plain label, "First verdict Sunday 20:00", with no gavel knock.
+- Title "The Tab" and a paper chip "Verdict on <weekday of the deadline>" (gavel icon, knocks every few
+  seconds). Before the first verdict it reads "First verdict Sunday 20:00" (the deadline's day and time), with
+  no gavel. Once paired, the chip opens the **deadline sheet** (M8, deliberate difference: there is no
+  reference for it): title "Verdict Sun 20:00", lead "Change it only if <bdi>Alex</bdi> agrees.", a primary
+  **Settle now**, "Or move it:" with outline pills (Tonight 21:00, In 3 days, In 5 days; a pill less than an
+  hour away is hidden), a native date-time field with **Propose**, and an underlined "See the last verdict"
+  once there is one (what the chip used to open). While waiting for the partner it stays a plain label.
+- **Proposal card** (M8): the plea card's butter card without a crime row, at the top of the feed. The partner
+  reads "<bdi>Maya</bdi> wants to settle the tab right now! Ready to face the verdict?" with **Settle now** /
+  **Not yet**, or "<bdi>Maya</bdi> is moving the goalposts! Verdict Fri 21:00 instead of Sun 20:00." with
+  **Deal** / **Nope**. The proposer reads "You want to settle now. Waiting for <bdi>Alex</bdi>…" with an
+  outline **Take it back**. Lowercase "right now": caps stay for the GUILTY stamp and the reel cold open.
 - A 40px paper "?" button at the top start (the name chip holds the top end) opens the **How it works** sheet:
-  three numbered steps (Log a slip-up · Own it or dispute it · Sunday verdict) and **Got it**. Also shown while
+  three numbered steps (Log a slip-up · Own it or dispute it · Verdict day) and **Got it**. Also shown while
   waiting for the partner.
 - Waiting state (pair not complete): the invite card replaces the scoreboard, no FAB.
 - Scoreboard (above). Faces react: the leader's sticker is `smug`, the trailing one `strain`, both `plain` when
