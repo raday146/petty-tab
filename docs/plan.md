@@ -451,11 +451,16 @@ Notes from M7:
 Status: in review (`feat/phone-ux`), asked for by the owner on 2026-10-14 after the two-phone test
 
 - [x] Only the list scrolls; the page does not bounce on iOS; **Log a petty crime** is a footer under the list,
-      so it never covers a charge (`Tab.module.css`, `globals.css`; screenshot in the PR)
+      so it never covers a charge (`Tab.module.css`, `globals.css`; reference screenshots 06 and 08 in the
+      e2e report)
 - [x] The scoreboard keeps the avatars, the rope and the lead; "Who owes what" opens the tally sheet
       (`e2e/tab.spec.ts` "A files Trash Jenga, B pleads guilty live, A sees the stamp and the score bump")
 - [x] Couple banter instead of court words, on screen and in pushes (spec §8, §10, §12; design.md §5, §6, §9;
       `notify.test.ts`, `push.service.test.ts`, `e2e/tab.spec.ts`)
+- [x] The filer's card says "<accused> is disputing this! What's the call?" above Nice try / Let it slide
+      (`e2e/tab.spec.ts` "B cries foul, A sees the card live…")
+- [x] A "?" in the header opens How it works, the three-step loop (`e2e/screens.spec.ts` "the ? opens How it
+      works")
 - [x] No daily filing limit; the M7 guard of 60 writes a minute stays (spec §8 and Open decision 7;
       `charges.service.test.ts` "has no daily cap", `e2e/tab.spec.ts` "there is no daily cap")
 - Reference screens 06, 08–10 and 15 still show the owed pills and the floating button; those screenshot tests
@@ -495,11 +500,14 @@ How it fits the code:
 - The UI reads the deadline from `/tab` (it already returns the week), so the chip ("Verdict Friday 21:00")
   and the reminders follow the stored cycle with no copy hard-coded to Sunday.
 
-Questions for the owner before planning the steps:
-1. Does an accepted change move the current deadline, or only start with the next cycle? (Proposal: the
-   current one, as asked; the next one is simpler and avoids most edge cases.)
-2. Is "Monday 20:00" (the sentence-change deadline) "24 hours after the verdict" for every cycle length?
-3. Is the Wednesday 19:00 sentence reminder "halfway through the cycle"?
+Decided by the owner on 2026-10-14:
+1. An accepted change moves the **current** deadline at once (within the limits above).
+2. The winner can change the sentence until their first share or 24 hours after the verdict, for every cycle
+   length (replaces "Monday 20:00"; `sentenceDeadline` in `week.ts`).
+3. The sentence reminder goes out at the halfway point of the cycle (replaces Wednesday 19:00;
+   `lastReminderTime` in `week.ts`).
+
+Next: plan mode for M8 (its "done when" list and steps) before any code.
 
 ### Product ideas for M8 and later (for the owner to pick)
 1. **Custom crimes.** The pair adds its own crimes (title, one line, a unit from the catalog, a sticker

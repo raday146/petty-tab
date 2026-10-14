@@ -131,10 +131,20 @@ test.describe('the tab', () => {
 
   test('the filer says nice try to a cried foul', async ({ page }) => {
     await open(page, 'appeal');
-    await expect(page.getByText('Alex cries foul.')).toBeVisible();
+    await expect(page.getByText('Alex is disputing this!')).toBeVisible();
     await page.getByRole('button', { name: 'Nice try' }).click();
     await expect(page.getByText('The Blanket Burrito, Alex, counts')).toBeAttached();
     await test.info().attach('appeal card', { body: await page.screenshot(), contentType: 'image/png' });
+  });
+
+  test('the ? opens How it works', async ({ page }) => {
+    await open(page, 'tab');
+    await page.getByRole('button', { name: 'How it works' }).click();
+    const sheet = page.getByRole('dialog', { name: 'How it works' });
+    await expect(sheet.getByText('Own it or dispute it.')).toBeVisible();
+    await test.info().attach('how it works', { body: await page.screenshot(), contentType: 'image/png' });
+    await sheet.getByRole('button', { name: 'Got it' }).click();
+    await expect(sheet).toBeHidden();
   });
 
   test('waiting for the partner', async ({ page }) => {
