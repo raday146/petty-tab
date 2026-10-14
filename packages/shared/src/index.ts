@@ -7,3 +7,4 @@ export * from './week.ts';
 export type { Species, StickerKey } from '@petty-tab/art';
 export * from './verdict.ts';
 export * from './notify.ts';
+export * from './breakdown.ts';
