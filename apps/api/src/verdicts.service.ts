@@ -1,6 +1,6 @@
 import { Injectable, type OnModuleInit } from '@nestjs/common';
 import {
-  firstCycleEnd,
+  cycleEnd,
   judge,
   pushText,
   reminderDue,
@@ -79,7 +79,7 @@ export class VerdictsService implements OnModuleInit {
       if (!start) continue;
       await this.prisma.pair.updateMany({
         where: { id: pair.id, cycleEnd: null },
-        data: { cycleStart: start, cycleEnd: firstCycleEnd(start, pair.timezone) },
+        data: { cycleStart: start, cycleEnd: cycleEnd(start, pair.timezone, pair.cycleDays) },
       });
     }
   }
@@ -104,7 +104,7 @@ export class VerdictsService implements OnModuleInit {
       if (!first || !second) continue;
       for (let week = { start: pair.cycleStart!, end: pair.cycleEnd! }; week.end <= now;) {
         if (await this.seal(pair, [first, second], week, now, type)) sealed++;
-        week = { start: week.end, end: firstCycleEnd(week.end, pair.timezone) };
+        week = { start: week.end, end: cycleEnd(week.end, pair.timezone, pair.cycleDays) };
       }
     }
     return sealed;
@@ -115,7 +115,7 @@ export class VerdictsService implements OnModuleInit {
    * second seal a no-op, and the next cycle only starts from the one just sealed.
    */
   private async seal(
-    pair: { id: string; timezone: string },
+    pair: { id: string; timezone: string; cycleDays: number | null },
     members: [Member, Member],
     week: { start: Date; end: Date },
     now: Date,
@@ -128,7 +128,7 @@ export class VerdictsService implements OnModuleInit {
         where: { id: pairId, cycleStart: week.start },
         data: {
           cycleStart: week.end,
-          cycleEnd: firstCycleEnd(week.end, pair.timezone),
+          cycleEnd: cycleEnd(week.end, pair.timezone, pair.cycleDays),
           proposalBy: null,
           proposalEnd: null,
           proposalAt: null,
