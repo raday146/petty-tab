@@ -43,6 +43,8 @@ export const rulesBody = z
     'Keep at least one crime in play.',
   );
 
+export type RulesInput = z.input<typeof rulesBody>;
+
 /** spec §4: the proposed rules as the invite and the join page show them. */
 export interface RulesSummary {
   cycleDays: CycleDays;

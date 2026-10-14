@@ -1,0 +1,14 @@
+.steps {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+.steps i {
+  width: 22px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--line);
+}
+.steps i.on {
+  background: var(--ink);
+}

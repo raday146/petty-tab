@@ -20,6 +20,8 @@ export async function startTab(page: Page, name: string, animal: RegExp): Promis
   await page.goto('/');
   await page.getByRole('button', { name: 'Start a tab' }).click();
   await pick(page, name, animal);
+  // Step 2 of 3: the rules, kept at their defaults (weekly, every crime).
+  await page.getByRole('button', { name: 'Create the tab' }).click();
   const sheet = page.getByRole('dialog');
   const link = await sheet.getByText('/j/').textContent();
   await sheet.getByRole('button', { name: 'Open our tab' }).click();
@@ -28,12 +30,18 @@ export async function startTab(page: Page, name: string, animal: RegExp): Promis
 
 export const path = (link: string): string => new URL(link).pathname;
 
+/** Opens an invite link and accepts the rules (spec §4); the animal picker comes next. */
+export async function openInvite(page: Page, link: string): Promise<void> {
+  await page.goto(path(link));
+  await page.getByRole('button', { name: 'Accept the rules & join' }).click();
+}
+
 /** Maya the Cat starts a tab, Alex the Bear joins it; both see the scoreboard. */
 export async function pair(browser: Browser): Promise<{ a: Page; b: Page }> {
   const a = await person(browser);
   const link = await startTab(a, 'Maya', /Cat/);
   const b = await person(browser);
-  await b.goto(path(link));
+  await openInvite(b, link);
   await pick(b, 'Alex', /Bear/);
   for (const p of [a, b]) await p.getByText('Dead even').waitFor({ timeout: 2000 });
   return { a, b };

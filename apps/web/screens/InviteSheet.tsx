@@ -1,7 +1,9 @@
 'use client';
 
 import { useState, useSyncExternalStore, type ReactNode } from 'react';
+import type { RulesSummary as RulesSummaryData } from '@petty-tab/shared';
 import { Button } from '@/components/Button';
+import { RulesSummary } from '@/components/RulesSummary';
 import { Sheet } from '@/components/Sheet';
 import { sfx } from '@/lib/sfx';
 import { cx } from '@/lib/cx';
@@ -11,6 +13,8 @@ interface Props {
   open: boolean;
   /** `https://<host>/j/<token>` (spec §4.2). */
   link: string;
+  /** spec §4: the rules the partner will accept by joining (step 3 of 3). */
+  rules?: RulesSummaryData;
   onClose: () => void;
   onOpenTab: () => void;
 }
@@ -55,7 +59,7 @@ export function InviteLink({ link }: { link: string }): ReactNode {
   );
 }
 
-export function InviteSheet({ open, link, onClose, onOpenTab }: Props): ReactNode {
+export function InviteSheet({ open, link, rules, onClose, onOpenTab }: Props): ReactNode {
   return (
     <Sheet
       open={open}
@@ -64,6 +68,11 @@ export function InviteSheet({ open, link, onClose, onOpenTab }: Props): ReactNod
       lead="Send the link. They tap it, pick their animal, and you share one tab."
     >
       <InviteLink link={link} />
+      {rules && (
+        <p className={s.rules}>
+          <RulesSummary rules={rules} side="inviter" />
+        </p>
+      )}
       <Button onClick={onOpenTab}>Open our tab</Button>
     </Sheet>
   );

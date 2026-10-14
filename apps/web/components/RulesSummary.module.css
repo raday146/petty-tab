@@ -1,0 +1,11 @@
+/* design.md §6: the rules on the invite sheet and the join page */
+.rules {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 4px;
+  text-align: start;
+}
+.rules b {
+  font-weight: 700;
+}

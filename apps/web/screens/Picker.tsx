@@ -4,6 +4,7 @@ import { AnimalCard } from '@/components/AnimalCard';
 import { AnimalSticker } from '@/components/AnimalSticker';
 import { Button } from '@/components/Button';
 import { Screen } from '@/components/Screen';
+import { Steps } from '@/components/Steps';
 import s from './Picker.module.css';
 
 interface Props {
@@ -16,6 +17,8 @@ interface Props {
   onContinue: () => void;
   /** Joining: who sent the link (spec §4.3). */
   invitedBy?: { species: Species; name: string };
+  /** The setup wizard's step (spec §4), shown as dots above the title. */
+  step?: 1;
   /** Extra controls under Continue (M2: "Leave the tab" when editing). */
   children?: ReactNode;
 }
@@ -28,6 +31,7 @@ export function Picker({
   onSpecies,
   onContinue,
   invitedBy,
+  step,
   children,
 }: Props): ReactNode {
   const shown = name.trim();
@@ -42,6 +46,7 @@ export function Picker({
             </span>
           </p>
         )}
+        {step && <Steps at={step} />}
         <h1 className={s.title}>Pick your spirit animal</h1>
         <label className={s.field}>
           <span>Your name</span>
