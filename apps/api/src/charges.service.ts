@@ -1,7 +1,8 @@
 import { Injectable, type OnModuleInit } from '@nestjs/common';
 import {
   canUndo,
-  currentWeek,
+  cycleAt,
+  deadlineLabel,
   PLEA_MS,
   pushText,
   tally,
@@ -24,6 +25,13 @@ import { Jobs, QUEUES } from './jobs.js';
 import { PairingService } from './pairing.service.js';
 import { PrismaService } from './prisma.service.js';
 import { PushService } from './push.service.js';
+
+/** The pair's current cycle (spec §10); only called on a complete pair, which always has one. */
+export const currentCycle = (
+  pair: { cycleStart: Date | null; cycleEnd: Date | null; timezone: string },
+  now: Date,
+): { start: Date; end: Date } =>
+  cycleAt({ start: pair.cycleStart!, end: pair.cycleEnd! }, pair.timezone, now);
 
 const notAllowed = (): ApiError => new ApiError(403, 'not_allowed', 'That is not yours to decide.');
 const conflict = (code: string): ApiError =>
@@ -54,7 +62,7 @@ export class ChargesService implements OnModuleInit {
     const [first, second] = me.pair.members;
     if (!second) throw new ApiError(409, 'pair_incomplete', 'Your partner has not joined yet.');
     const them = me.id === first!.id ? second : first!;
-    return { me, them, week: currentWeek(second.joinedAt, me.pair.timezone, this.clock.now()) };
+    return { me, them, week: currentCycle(me.pair, this.clock.now()) };
   }
 
   /** A charge in the caller's pair and the caller's side of it. */
@@ -66,8 +74,7 @@ export class ChargesService implements OnModuleInit {
     if (!charge) throw new ApiError(404, 'not_allowed', 'That charge is not on your tab.');
     // spec §8: once the charge's week has ended, nothing about it changes, sealed yet or not.
     const now = this.clock.now();
-    const joined = me.pair.members[1]!.joinedAt;
-    if (currentWeek(joined, me.pair.timezone, charge.weekStart).end <= now) {
+    if (!me.pair.cycleEnd || charge.weekStart.getTime() !== currentCycle(me.pair, now).start.getTime()) {
       throw new ApiError(409, 'week_closed', 'That week is closed.');
     }
     const actor = charge.filerId === me.id ? ('filer' as const) : ('accused' as const);
@@ -179,6 +186,14 @@ export class ChargesService implements OnModuleInit {
         filer: c.filerId === me.id ? 'me' : 'them',
       })),
       hasVerdict: verdicts.length > 0,
+      deadline: { end: week.end.toISOString(), label: deadlineLabel(week.end, me.pair.timezone) },
+      proposal: me.pair.proposalBy
+        ? {
+            mine: me.pair.proposalBy === me.id,
+            end: me.pair.proposalEnd?.toISOString() ?? null,
+            label: me.pair.proposalEnd ? deadlineLabel(me.pair.proposalEnd, me.pair.timezone) : null,
+          }
+        : null,
       unconfirmed: verdicts
         .filter((v) => !v.isTie && !v.confirmedAt)
         .map((v) => {

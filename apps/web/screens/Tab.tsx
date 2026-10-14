@@ -18,11 +18,12 @@ import { NameChip } from '@/components/NameChip';
 import { nudge, Screen } from '@/components/Screen';
 import { Sheet } from '@/components/Sheet';
 import { Toast, useToast } from '@/components/Toast';
-import { CourtCard } from '@/components/tab/CourtCard';
+import { CourtCard, ProposalCard } from '@/components/tab/CourtCard';
 import { CrimeRow } from '@/components/tab/CrimeRow';
 import { CrimeTile } from '@/components/tab/CrimeTile';
 import { Scoreboard, Tally, type Member, type Owed } from '@/components/tab/Scoreboard';
 import { ApiFailure } from '@/lib/api';
+import { cx } from '@/lib/cx';
 import { sfx } from '@/lib/sfx';
 import { InviteLink } from './InviteSheet';
 import s from './Tab.module.css';
@@ -34,8 +35,20 @@ interface Props {
   them: Member;
   /** Set while the partner has not joined: the invite card replaces the scoreboard, logging is off. */
   inviteLink?: string;
-  /** Before the first verdict the chip is a label: "First verdict <day> 20:00" (spec §10). */
-  firstVerdictDay?: string;
+  /** Before the first verdict the chip reads "First verdict <day> <time>" (spec §10). */
+  firstVerdict?: boolean;
+  /** The current deadline in the pair's timezone, "Sun 20:00" (spec §10); Sunday 20:00 while waiting. */
+  deadline?: string;
+  /** The open settle-now or move proposal (spec §10). */
+  proposal?: TabView['proposal'];
+  /** A sealed verdict exists: the deadline sheet offers it. */
+  hasVerdict?: boolean;
+  /** Proposes a new deadline (ISO), or null to settle now. Without it the chip opens no sheet (waiting). */
+  onPropose?: (end: string | null) => Promise<void>;
+  /** The partner's answer to a proposal. */
+  onAnswer?: (yes: boolean) => void;
+  /** The proposer takes it back. */
+  onWithdraw?: () => void;
   lead: number;
   meOwed: Owed;
   themOwed: Owed;
@@ -55,9 +68,39 @@ interface Props {
 }
 
 const SLAM_MS = 1900;
+const DAYS: Record<string, string> = {
+  Mon: 'Monday',
+  Tue: 'Tuesday',
+  Wed: 'Wednesday',
+  Thu: 'Thursday',
+  Fri: 'Friday',
+  Sat: 'Saturday',
+  Sun: 'Sunday',
+};
+
+/**
+ * The quick choices for a new deadline, in the device's clock (the pair's timezone is the creator's device
+ * zone). ponytail: a partner in another timezone sees these in theirs; the label on the card is the pair's.
+ */
+function quickDeadlines(now: Date): { label: string; end: Date }[] {
+  const at = (days: number, hour: number): Date => {
+    const d = new Date(now);
+    d.setDate(d.getDate() + days);
+    d.setHours(hour, 0, 0, 0);
+    return d;
+  };
+  return [
+    { label: 'Tonight 21:00', end: at(0, 21) },
+    { label: 'In 3 days', end: at(3, 20) },
+    { label: 'In 5 days', end: at(5, 20) },
+  ].filter((q) => q.end.getTime() - now.getTime() >= 60 * 60 * 1000);
+}
 
 export function Tab(props: Props): ReactNode {
-  const { me, them, inviteLink, firstVerdictDay, charges } = props;
+  const { me, them, inviteLink, charges, proposal } = props;
+  const [day, time] = (props.deadline ?? 'Sun 20:00').split(' ') as [string, string];
+  const [deadlineOpen, setDeadlineOpen] = useState(false);
+  const [picked, setPicked] = useState('');
   const [logOpen, setLogOpen] = useState(false);
   const [tallyOpen, setTallyOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
@@ -158,6 +201,23 @@ export function Tab(props: Props): ReactNode {
     if (c) bumpPill(c.crime);
   };
 
+  const propose = (end: string | null): void => {
+    setDeadlineOpen(false);
+    props.onPropose?.(end).then(
+      () =>
+        show({
+          title: end ? 'Proposal sent' : 'Settle now?',
+          message: (
+            <>
+              Waiting for <bdi>{them.name}</bdi>.
+            </>
+          ),
+        }),
+      () =>
+        show({ title: 'That time won’t work', message: 'Pick one at least an hour away, within two weeks.' }),
+    );
+  };
+
   const accused = (c: TabCharge): Member => (c.filer === 'me' ? them : me);
   // spec §8 who-sees-what: plea cards for pending charges against me, appeal cards for appeals on mine.
   const isCard = (c: TabCharge): boolean =>
@@ -175,12 +235,25 @@ export function Tab(props: Props): ReactNode {
         )}
         <div className={s.row}>
           <h1 className={s.title}>The Tab</h1>
-          {firstVerdictDay ? (
-            <span className={`${s.chip} ${s.label}`}>First verdict {firstVerdictDay} 20:00</span>
+          {props.firstVerdict && !props.onPropose ? (
+            <span className={`${s.chip} ${s.label}`}>
+              First verdict {DAYS[day]} {time}
+            </span>
           ) : (
-            <button type="button" className={s.chip} onClick={props.onVerdict}>
-              <Art className={s.gavel} draw={(art) => art.icon('gavel')} />
-              Verdict on Sunday
+            <button
+              type="button"
+              className={cx(s.chip, props.firstVerdict && s.label)}
+              aria-haspopup={props.onPropose ? 'dialog' : undefined}
+              onClick={props.onPropose ? () => setDeadlineOpen(true) : props.onVerdict}
+            >
+              {props.firstVerdict ? (
+                `First verdict ${DAYS[day]} ${time}`
+              ) : (
+                <>
+                  <Art className={s.gavel} draw={(art) => art.icon('gavel')} />
+                  Verdict on {DAYS[day]}
+                </>
+              )}
             </button>
           )}
         </div>
@@ -206,6 +279,15 @@ export function Tab(props: Props): ReactNode {
       {!inviteLink && (
         <>
           <div className={s.feed}>
+            {proposal && (
+              <ProposalCard
+                proposal={proposal}
+                them={them}
+                deadline={props.deadline ?? ''}
+                onAnswer={(yes) => props.onAnswer?.(yes)}
+                onWithdraw={() => props.onWithdraw?.()}
+              />
+            )}
             {charges
               .filter(isCard)
               .map((c) =>
@@ -255,6 +337,81 @@ export function Tab(props: Props): ReactNode {
               </Button>
             </div>
           )}
+          <Sheet
+            open={deadlineOpen}
+            onClose={() => setDeadlineOpen(false)}
+            title={`Verdict ${DAYS[day]} ${time}`}
+            lead={
+              proposal ? (
+                proposal.mine ? (
+                  <>
+                    Waiting for <bdi>{them.name}</bdi> to answer.
+                  </>
+                ) : (
+                  <>
+                    <bdi>{them.name}</bdi> has a proposal for you on the tab.
+                  </>
+                )
+              ) : (
+                <>
+                  Change it only if <bdi>{them.name}</bdi> agrees.
+                </>
+              )
+            }
+          >
+            {!proposal && (
+              <div className={s.when}>
+                <Button onClick={() => propose(null)}>Settle now</Button>
+                <p>Or move it:</p>
+                <div className={s.quick}>
+                  {quickDeadlines(new Date()).map((q) => (
+                    <button key={q.label} type="button" onClick={() => propose(q.end.toISOString())}>
+                      {q.label}
+                    </button>
+                  ))}
+                </div>
+                <form
+                  className={s.pick}
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    if (picked) propose(new Date(picked).toISOString());
+                  }}
+                >
+                  <input
+                    type="datetime-local"
+                    aria-label="Pick a time"
+                    required
+                    value={picked}
+                    onChange={(e) => setPicked(e.target.value)}
+                  />
+                  <button type="submit">Propose</button>
+                </form>
+              </div>
+            )}
+            {proposal?.mine && (
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setDeadlineOpen(false);
+                  props.onWithdraw?.();
+                }}
+              >
+                Take it back
+              </Button>
+            )}
+            {props.hasVerdict && (
+              <button
+                type="button"
+                className={s.last}
+                onClick={() => {
+                  setDeadlineOpen(false);
+                  props.onVerdict();
+                }}
+              >
+                See the last verdict
+              </button>
+            )}
+          </Sheet>
           <Sheet open={tallyOpen} onClose={() => setTallyOpen(false)} title="Who owes what">
             <Tally me={me} them={them} meOwed={props.meOwed} themOwed={props.themOwed} bump={bump} />
           </Sheet>
@@ -286,8 +443,9 @@ export function Tab(props: Props): ReactNode {
             me!&rdquo;. Disputed? The one who logged it makes the call. Silence for a day counts as owning it.
           </li>
           <li>
-            <b>Sunday verdict.</b> At 20:00 the week seals. Whoever was charged more is found guilty and owes
-            a sentence. Share the card, then start fresh at 0&ndash;0.
+            <b>Verdict day.</b> Sunday at 20:00, or sooner if you both tap Settle now, the week seals. Whoever
+            was charged more is found guilty and owes a sentence. Share the card, then start fresh at
+            0&ndash;0.
           </li>
         </ol>
         <Button onClick={() => setHelpOpen(false)}>Got it</Button>

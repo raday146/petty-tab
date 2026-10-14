@@ -177,8 +177,8 @@ describe('delivery', () => {
   });
 });
 
-describe('the sentence reminder (spec §12: Wednesday 19:00 local)', () => {
-  it('reminds the loser once each Wednesday until the sentence is served', async () => {
+describe('the sentence reminder (spec §12: the halfway point of each cycle)', () => {
+  it('reminds the loser once each cycle until the sentence is served', async () => {
     const { a, b, mb } = await pair();
     await file(a);
     now = at('2026-10-18T17:00:00Z');
@@ -186,23 +186,25 @@ describe('the sentence reminder (spec §12: Wednesday 19:00 local)', () => {
     const { id, sentence } = await verdicts.view(a, 'latest');
     sent = [];
 
-    now = at('2026-10-21T15:59:00Z');
+    // The next cycle runs Sunday 18 Oct 20:00 to Sunday 25 Oct 20:00 (after the DST change): halfway 05:30 UTC.
+    now = at('2026-10-22T05:29:00Z');
     await verdicts.remind();
     expect(to(mb)).toEqual([]);
-    now = at('2026-10-21T16:00:00Z');
+    now = at('2026-10-22T05:30:00Z');
     await Promise.all([verdicts.remind(), verdicts.remind()]);
-    now = at('2026-10-21T16:15:00Z');
+    now = at('2026-10-24T12:00:00Z');
     await verdicts.remind();
     expect(to(mb)).toHaveLength(1);
     expect(to(mb)[0]).toMatch(/^You still owe Maya: .+\.$/);
     expect(sentence).not.toBeNull();
 
-    now = at('2026-10-28T17:00:00Z');
+    // The cycle after it (the sealer has not run: the tab rolls on by itself), halfway 29 Oct 06:00 UTC.
+    now = at('2026-10-29T06:00:00Z');
     await verdicts.remind();
     expect(to(mb)).toHaveLength(2);
 
     await verdicts.served(b, id);
-    now = at('2026-11-04T17:00:00Z');
+    now = at('2026-11-05T06:00:00Z');
     await verdicts.remind();
     expect(to(mb)).toHaveLength(2);
   });

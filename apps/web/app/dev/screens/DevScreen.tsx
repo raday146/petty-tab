@@ -132,7 +132,7 @@ function TabDemo(props: {
       me={props.me}
       them={props.them}
       inviteLink={props.waiting ? mock.INVITE_LINK : undefined}
-      firstVerdictDay={props.waiting ? 'Sunday' : undefined}
+      firstVerdict={props.waiting}
       lead={score.lead}
       meOwed={score.meOwed}
       themOwed={score.themOwed}

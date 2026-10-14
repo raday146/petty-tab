@@ -1,6 +1,6 @@
 import { Injectable, type OnModuleInit } from '@nestjs/common';
 import {
-  endedWeeks,
+  firstCycleEnd,
   judge,
   pushText,
   reminderDue,
@@ -9,6 +9,7 @@ import {
   sentenceDeadline,
   sentenceLocked,
   type CrimeKey,
+  type EventType,
   type RenderedJob,
   type RenderJob,
   type RenderKind,
@@ -19,6 +20,7 @@ import {
   type VerdictView,
 } from '@petty-tab/shared';
 import { z } from 'zod';
+import { currentCycle } from './charges.service.js';
 import { Clock } from './clock.js';
 import { signedFileUrl } from './crypto.js';
 import { ApiError } from './errors.js';
@@ -43,10 +45,11 @@ export class VerdictsService implements OnModuleInit {
   ) {}
 
   async onModuleInit(): Promise<void> {
+    await this.backfillCycles();
     await this.jobs.start();
     await this.jobs.boss.work(QUEUES.seal, () => this.sealDue());
     await this.jobs.boss.schedule(QUEUES.seal, '*/5 * * * *');
-    // Every 15 minutes, so Wednesday 19:00 lands on time in :30 and :45 zones too.
+    // Every 15 minutes: the halfway point is never more than a sweep late.
     await this.jobs.boss.work(QUEUES.reminder, () => this.remind());
     await this.jobs.boss.schedule(QUEUES.reminder, '*/15 * * * *');
     // Retention lives with the other crons; the rule itself is PairingService.purge.
@@ -59,39 +62,78 @@ export class VerdictsService implements OnModuleInit {
   }
 
   /**
-   * spec §10: seals every ended, unsealed week of every complete pair, oldest first, so a sealer that was
-   * down catches up. Returns how many verdicts it sealed.
+   * M8: pairs completed before cycles were stored get theirs, exactly as the old Sunday maths derived it:
+   * from the last verdict's end (or the partner's join) to the first Sunday 20:00 at least 48 hours later.
+   * The sealer then catches up on any that already ended. A no-op once every pair has one.
    */
-  async sealDue(now = this.clock.now(), only?: { pairId: string }): Promise<number> {
-    // ponytail: reads every active pair each run; store the next week_end on the pair and index it if the
-    // pair count makes this slow.
+  async backfillCycles(): Promise<void> {
     const pairs = await this.prisma.pair.findMany({
-      where: { endedAt: null, id: only?.pairId },
+      where: { cycleEnd: null, endedAt: null },
       include: {
         members: { orderBy: [{ joinedAt: 'asc' }, { id: 'asc' }] },
         verdicts: { orderBy: { weekStart: 'desc' }, take: 1 },
       },
     });
+    for (const pair of pairs) {
+      const start = pair.verdicts[0]?.weekEnd ?? pair.members[1]?.joinedAt;
+      if (!start) continue;
+      await this.prisma.pair.updateMany({
+        where: { id: pair.id, cycleEnd: null },
+        data: { cycleStart: start, cycleEnd: firstCycleEnd(start, pair.timezone) },
+      });
+    }
+  }
+
+  /**
+   * spec §10: seals every ended cycle of every complete pair, oldest first, so a sealer that was down
+   * catches up. `type` is the event both phones get: `verdict.settled` opens the verdict (settle now).
+   * Returns how many verdicts it sealed.
+   */
+  async sealDue(
+    now = this.clock.now(),
+    only?: { pairId: string },
+    type: EventType = 'verdict.sealed',
+  ): Promise<number> {
+    const pairs = await this.prisma.pair.findMany({
+      where: { endedAt: null, id: only?.pairId, cycleEnd: { lte: now } },
+      include: { members: { orderBy: [{ joinedAt: 'asc' }, { id: 'asc' }] } },
+    });
     let sealed = 0;
     for (const pair of pairs) {
       const [first, second] = pair.members;
       if (!first || !second) continue;
-      const after = pair.verdicts[0]?.weekEnd ?? second.joinedAt;
-      for (const week of endedWeeks(second.joinedAt, pair.timezone, after, now)) {
-        if (await this.seal(pair.id, [first, second], week, now)) sealed++;
+      for (let week = { start: pair.cycleStart!, end: pair.cycleEnd! }; week.end <= now;) {
+        if (await this.seal(pair, [first, second], week, now, type)) sealed++;
+        week = { start: week.end, end: firstCycleEnd(week.end, pair.timezone) };
       }
     }
     return sealed;
   }
 
-  /** One week, in one transaction. The unique (pair_id, week_start) makes a second seal a no-op. */
+  /**
+   * One cycle, in one transaction: seal it and start the next. The unique (pair_id, week_start) makes a
+   * second seal a no-op, and the next cycle only starts from the one just sealed.
+   */
   private async seal(
-    pairId: string,
+    pair: { id: string; timezone: string },
     members: [Member, Member],
     week: { start: Date; end: Date },
     now: Date,
+    type: EventType,
   ): Promise<boolean> {
+    const pairId = pair.id;
     const id = await this.prisma.$transaction(async (tx) => {
+      // An open proposal lapses with its cycle.
+      await tx.pair.updateMany({
+        where: { id: pairId, cycleStart: week.start },
+        data: {
+          cycleStart: week.end,
+          cycleEnd: firstCycleEnd(week.end, pair.timezone),
+          proposalBy: null,
+          proposalEnd: null,
+          proposalAt: null,
+        },
+      });
       // Step 1: final statuses, resolved at week_end (Open decision 1: unresolved appeals are dropped).
       const where = { pairId, weekStart: week.start };
       await tx.charge.updateMany({
@@ -129,7 +171,7 @@ export class VerdictsService implements OnModuleInit {
       return row?.id;
     });
     if (!id) return false;
-    this.events.emit(pairId, 'verdict.sealed');
+    this.events.emit(pairId, type);
     const { winnerId, isTie } = await this.prisma.verdict.findUniqueOrThrow({ where: { id } });
     for (const m of members) {
       const type = isTie ? 'verdict.tie' : m.id === winnerId ? 'verdict.won' : 'verdict.lost';
@@ -139,17 +181,22 @@ export class VerdictsService implements OnModuleInit {
     return true;
   }
 
-  /** spec §12: the loser's Wednesday 19:00 reminder, while the sentence is neither served nor confirmed. */
+  /** spec §12: the loser's halfway-point reminder, while the sentence is neither served nor confirmed. */
   async remind(): Promise<number> {
     const now = this.clock.now();
     // ponytail: scans every open sentence each sweep; add an index or a due-at column if that list grows.
     const open = await this.prisma.verdict.findMany({
-      where: { isTie: false, servedAt: null, confirmedAt: null, pair: { endedAt: null } },
+      where: {
+        isTie: false,
+        servedAt: null,
+        confirmedAt: null,
+        pair: { endedAt: null, cycleEnd: { not: null } },
+      },
       include: { pair: true },
     });
     let sent = 0;
     for (const v of open) {
-      if (!reminderDue(v.sealedAt, v.remindedAt, v.pair.timezone, now)) continue;
+      if (!reminderDue(v.sealedAt, v.remindedAt, currentCycle(v.pair, now), now)) continue;
       // Only one of two overlapping sweeps moves reminded_at on.
       const { count } = await this.prisma.verdict.updateMany({
         where: { id: v.id, remindedAt: v.remindedAt },
@@ -213,11 +260,7 @@ export class VerdictsService implements OnModuleInit {
       : null;
     if (!verdict) throw new ApiError(404, 'not_allowed', 'There is no verdict yet.');
     const now = this.clock.now();
-    const locked = sentenceLocked(
-      verdict.sentenceLockedAt,
-      sentenceDeadline(verdict.weekEnd, me.pair.timezone),
-      now,
-    );
+    const locked = sentenceLocked(verdict.sentenceLockedAt, sentenceDeadline(verdict.sealedAt), now);
     // On a tie the snapshot keeps join order; the first member reads as the "winner" side.
     const role = (verdict.winnerId ?? me.pair.members[0]!.id) === me.id ? 'winner' : 'loser';
     return { me, verdict, role, locked, now } as const;
