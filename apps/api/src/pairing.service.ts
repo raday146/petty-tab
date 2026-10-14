@@ -52,7 +52,7 @@ export class PairingService {
   private activeMember(userId: string) {
     return this.prisma.member.findFirst({
       where: { userId, pair: { endedAt: null } },
-      include: { pair: { include: { members: { orderBy: { joinedAt: 'asc' } } } } },
+      include: { pair: { include: { members: { orderBy: [{ joinedAt: 'asc' }, { id: 'asc' }] } } } },
     });
   }
 
