@@ -26,7 +26,7 @@ import { NewCrime } from '@/components/tab/NewCrime';
 import { Scoreboard, Tally, type Member, type Owed } from '@/components/tab/Scoreboard';
 import { ApiFailure } from '@/lib/api';
 import { cx } from '@/lib/cx';
-import { sfx } from '@/lib/sfx';
+import { buzz, sfx } from '@/lib/sfx';
 import { InviteLink } from './InviteSheet';
 import s from './Tab.module.css';
 
@@ -138,7 +138,10 @@ export function Tab(props: Props): ReactNode {
   }, []);
 
   const bumpPill = useCallback(
-    (crime: string): void => setBump((b) => ({ unit: crimeInfo(book, crime).unit, n: (b?.n ?? 0) + 1 })),
+    (crime: string): void => {
+      sfx.bump();
+      setBump((b) => ({ unit: crimeInfo(book, crime).unit, n: (b?.n ?? 0) + 1 }));
+    },
     [book],
   );
 
@@ -166,6 +169,7 @@ export function Tab(props: Props): ReactNode {
 
   const file = async (crime: string): Promise<void> => {
     setLogOpen(false);
+    buzz(10);
     sfx.paper();
     setTimeout(sfx.pop, 180);
     let id: string;
