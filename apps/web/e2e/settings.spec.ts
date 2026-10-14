@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { pair, path, person, pick, startTab } from './people';
+import { openInvite, pair, person, pick, startTab } from './people';
 
 // plan.md M6: the one-time notifications offer (spec §12) and the sound setting (design.md §8).
 // plan.md M7: delete everything (spec §4.8).
@@ -16,7 +16,7 @@ test('the notifications offer comes once the pair completes, and only once', asy
   await expect(offer).toBeHidden();
 
   const b = await person(browser);
-  await b.goto(path(link));
+  await openInvite(b, link);
   await pick(b, 'Alex', /Bear/);
   await expect(offer).toBeVisible({ timeout: 2000 });
   await expect(offer).toContainText('A ping when Alex logs a crime or cries foul');
