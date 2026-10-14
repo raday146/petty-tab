@@ -3,14 +3,7 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { ORDER, type Species } from '@petty-tab/art';
 import { reelInput } from '@petty-tab/reel';
-import {
-  SENTENCES,
-  type CrimeKey,
-  type Me,
-  type TabEvent,
-  type TabView,
-  type VerdictView,
-} from '@petty-tab/shared';
+import { SENTENCES, type Me, type TabEvent, type TabView, type VerdictView } from '@petty-tab/shared';
 import { Button } from '@/components/Button';
 import { api } from '@/lib/api';
 import {
@@ -175,7 +168,7 @@ function Pair({
   /** The viewer's own writes refetch too, so the tab stays right even if the stream drops. */
   const write = (path: string, init?: { method?: string; body?: unknown }): void =>
     void api(path, init).then(loadTab, loadTab);
-  const file = async (crimeKey: CrimeKey): Promise<string> => {
+  const file = async (crimeKey: string): Promise<string> => {
     const { id } = await api<{ id: string }>('/charges', { body: { crimeKey } });
     void loadTab();
     return id;
@@ -256,6 +249,10 @@ function Pair({
         unconfirmed={tab?.unconfirmed}
         onFile={partner ? file : undefined}
         onUndo={(id) => write(`/charges/${id}`, { method: 'DELETE' })}
+        custom={tab?.custom}
+        onCreateCrime={(body) => api<{ id: string }>('/crimes', { body }).then(() => loadTab())}
+        onRemoveCrime={(id) => write(`/crimes/${id}`, { method: 'DELETE' })}
+        onChore={(id, done) => write(`/chores/${id}/done`, { method: done ? 'POST' : 'DELETE' })}
         onPlea={(id, plea) => write(`/charges/${id}/plea`, { body: { plea } })}
         onDecide={(id, decision) => write(`/charges/${id}/appeal`, { body: { decision } })}
         onVerdict={() => void loadVerdict('latest')}

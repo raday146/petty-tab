@@ -242,3 +242,86 @@ button.chip:active {
   font-weight: 600;
   text-decoration: underline;
 }
+/* The picker's own crimes (design.md §6): add one, or the list with Remove. */
+.own {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 14px;
+}
+.own button,
+.ownList button {
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font-weight: 600;
+  text-decoration: underline;
+}
+.ownList {
+  list-style: none;
+  margin: 20px 0 0;
+  padding: 0;
+  max-height: 486px;
+  overflow-y: auto;
+}
+.ownList li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+}
+.ownList small {
+  color: var(--mute);
+}
+/* Today's chores (design.md §6): mine are tick buttons, the partner's read-only. */
+.chores {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.chores li > button,
+.chores li.theirs {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 44px;
+  padding: 6px 14px;
+  border: 0;
+  border-radius: 16px;
+  background: var(--paper);
+  color: var(--ink);
+  font-weight: 600;
+  font-size: 15px;
+  text-align: start;
+}
+.chores li > button:active {
+  transform: scale(0.98);
+  background: var(--butter);
+}
+.chores small {
+  margin-inline-start: auto;
+  color: var(--mute);
+  font-weight: 400;
+  font-size: 13.5px;
+}
+.tick {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 8px;
+  box-shadow: inset 0 0 0 1.5px var(--ink);
+  font-size: 15px;
+}
+[aria-pressed='true'] .tick,
+.theirs .tick:not(:empty) {
+  background: var(--ink);
+  color: var(--paper);
+}
