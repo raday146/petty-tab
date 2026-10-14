@@ -2,13 +2,18 @@ import { rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { Injectable } from '@nestjs/common';
 import {
-  firstCycleEnd,
+  checkProposedEnd,
+  CRIME_KEYS,
+  CRIMES,
+  cycleEnd,
   INVITE_TTL_MS,
   inviteStatus,
   pushText,
   type acceptInviteBody,
   type createPairBody,
   type InvitePreview,
+  type RulesSummary,
+  type StickerKey,
   type updateMemberBody,
   type Me,
   type Species,
@@ -38,6 +43,29 @@ const speciesTaken = (): ApiError =>
 export const KEEP_ENDED_MS = 30 * 24 * 60 * 60 * 1000;
 const isUniqueViolation = (e: unknown): boolean =>
   e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002';
+
+/** spec §4: the rules as the join page shows them, from the joiner's side. */
+function rulesSummary(pair: {
+  cycleDays: number | null;
+  firstEnd: Date | null;
+  crimesOff: string[];
+  crimes: { title: string; sticker: string; choreOwnerId: string | null; choreForJoiner: boolean }[];
+}): RulesSummary {
+  return {
+    cycleDays: pair.cycleDays as RulesSummary['cycleDays'],
+    firstEnd: pair.firstEnd?.toISOString() ?? null,
+    crimes: [
+      ...pair.crimes.map((c) => ({ title: c.title, sticker: c.sticker as StickerKey })),
+      ...CRIME_KEYS.filter((k) => !pair.crimesOff.includes(k)).map((k) => ({
+        title: CRIMES[k].title,
+        sticker: CRIMES[k].sticker,
+      })),
+    ],
+    chores: pair.crimes
+      .filter((c) => c.choreOwnerId || c.choreForJoiner)
+      .map((c) => ({ title: c.title, owner: c.choreForJoiner ? 'you' : 'inviter' })),
+  };
+}
 
 /** spec §3–4: who you are, which pair you are in, and how pairs form and end. */
 @Injectable()
@@ -76,16 +104,36 @@ export class PairingService {
       // ponytail: checked, not constrained; two simultaneous taps could race into two pairs. Add a
       // partial unique index on an active-membership column if that ever shows up.
       if (await tx.member.findFirst({ where: { userId, pair: { endedAt: null } } })) throw alreadyInPair();
+      const now = this.clock.now();
+      const rules = body.rules;
+      // spec §4: a first deadline must still be an hour to 14 days away (checked again at the join).
+      const refused = rules?.firstEnd && checkProposedEnd(new Date(rules.firstEnd), now);
+      if (refused) throw new ApiError(422, refused, 'Pick a first deadline an hour to two weeks away.');
       const pair = await tx.pair.create({
         data: {
           timezone: body.timezone,
+          cycleDays: rules?.cycleDays ?? null,
+          firstEnd: rules?.firstEnd ? new Date(rules.firstEnd) : null,
+          crimesOff: rules?.crimesOff ?? [],
           members: {
-            create: { userId, displayName: body.name, species: body.species, joinedAt: this.clock.now() },
+            create: { userId, displayName: body.name, species: body.species, joinedAt: now },
           },
         },
         include: { members: true },
       });
-      return this.issueInvite(tx, pair.id, pair.members[0]!.id);
+      const creator = pair.members[0]!.id;
+      // The pair's own crimes and chores; a chore for the partner waits for them to join.
+      await tx.customCrime.createMany({
+        data: (rules?.custom ?? []).map(({ chore, ...crime }) => ({
+          ...crime,
+          pairId: pair.id,
+          createdBy: creator,
+          choreOwnerId: chore === 'me' ? creator : null,
+          choreForJoiner: chore === 'them',
+          createdAt: now,
+        })),
+      });
+      return this.issueInvite(tx, pair.id, creator);
     });
   }
 
@@ -115,12 +163,13 @@ export class PairingService {
   async previewInvite(userId: string, token: string): Promise<InvitePreview> {
     const invite = await this.prisma.invite.findUnique({
       where: { tokenHash: sha256(token) },
-      include: { creator: true, pair: true },
+      include: { creator: true, pair: { include: { crimes: { where: { removedAt: null } } } } },
     });
     if (!invite || invite.pair.endedAt || inviteStatus(invite, this.clock.now()) !== 'valid') throw invalid();
     return {
       inviter: { name: invite.creator.displayName, species: invite.creator.species as Species },
       own: invite.creator.userId === userId,
+      rules: rulesSummary(invite.pair),
     };
   }
 
@@ -148,7 +197,7 @@ export class PairingService {
             })
           : { count: 0 };
         if (!invite || consumed.count !== 1) throw invalid();
-        await tx.member.create({
+        const joiner = await tx.member.create({
           data: {
             pairId: invite.pairId,
             userId,
@@ -157,10 +206,20 @@ export class PairingService {
             joinedAt: now,
           },
         });
-        // spec §10: the first cycle starts now.
+        // spec §4, §10: the first cycle starts now, and ends at the creator's first deadline while that is
+        // still an hour or more away, else by the pair's cycle. Chores set up for the partner become theirs.
+        const { firstEnd, timezone, cycleDays } = invite.pair;
         await tx.pair.update({
           where: { id: invite.pairId },
-          data: { cycleStart: now, cycleEnd: firstCycleEnd(now, invite.pair.timezone) },
+          data: {
+            cycleStart: now,
+            cycleEnd:
+              firstEnd && !checkProposedEnd(firstEnd, now) ? firstEnd : cycleEnd(now, timezone, cycleDays),
+          },
+        });
+        await tx.customCrime.updateMany({
+          where: { pairId: invite.pairId, choreForJoiner: true },
+          data: { choreOwnerId: joiner.id, choreForJoiner: false },
         });
         return invite.pairId;
       });

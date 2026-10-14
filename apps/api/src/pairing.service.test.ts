@@ -110,7 +110,7 @@ describe('invite link lifecycle (spec §4.2)', () => {
 describe('join (spec §4.3–4.4)', () => {
   it('shows who invited you, and whether it is your own link', async () => {
     const { a, token } = await startTab();
-    expect(await service.previewInvite(await newUser(), token)).toEqual({
+    expect(await service.previewInvite(await newUser(), token)).toMatchObject({
       inviter: { name: 'Maya', species: 'cat' },
       own: false,
     });
