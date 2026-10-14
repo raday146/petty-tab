@@ -25,7 +25,7 @@ Audience: young couples, roommates and best friends. Tone: warm, witty, self-awa
 | Crime | A catalog entry (§6): title, description, sticker, currency unit. |
 | Charge | One logged crime: filed by one member against the other. |
 | Plea | The accused's answer to a charge: guilty or appeal. |
-| Week | The window between two Sunday verdicts in the pair's timezone. |
+| Week | The window between two verdicts (a cycle). By default Sunday 20:00 to Sunday 20:00 in the pair's timezone; the pair can settle early or move the deadline together (§10). |
 | Verdict | The sealed result of a week: winner, loser, top crimes, sentence. |
 | Sentence | What the loser owes the winner (§7). |
 
@@ -193,10 +193,24 @@ Worked examples (the unit tests must include these):
 | Maya filed 7 counting charges; Alex filed 0 | 7 – 0 | … | … | +7 → 10% (offset clamped to 40) |
 | Each filed 2 counting charges | 2 – 2 | … | … | 0 → 50%, "Dead even" |
 
-## 10. The week and the Sunday verdict
+## 10. The week and the verdict
 
-- A week runs from Sunday 20:00 to the next Sunday 20:00 in the pair's timezone. The first week of a new pair
-  starts when the second member joins and ends at the first Sunday 20:00 at least 48 hours later.
+- The pair stores its current week (`cycle_start`, `cycle_end`). The first week of a new pair starts when the
+  second member joins. Every week, the first included, ends by default at the first Sunday 20:00 in the pair's
+  timezone at least 48 hours after it starts, so after a Sunday verdict the next week is Sunday to Sunday.
+- **Settle now.** Either member can propose to settle now. The partner sees "Maya wants to settle the tab right
+  now! Ready to face the verdict?" with **Settle now** / **Not yet**, and gets a push with the same words. On
+  **Settle now** the week ends at that moment and seals on the spot, by the same rules as below; both phones
+  open the verdict (the only verdict that opens by itself). On **Not yet** the proposer gets "Alex says not
+  yet."
+- **Moving the deadline.** Either member can propose a new end for the current week, at least an hour and at
+  most 14 days ahead (quick picks: tonight 21:00, in 3 days, in 5 days, or any time). The partner sees "Maya is
+  moving the goalposts! Verdict Fri 21:00 instead of Sun 20:00." with **Deal** / **Nope**, and a push. **Deal**
+  moves the current week's end at once (decided by the owner on 2026-10-14) and the proposer gets "Alex
+  agreed. Verdict Fri 21:00."; **Nope** sends "Alex says nope." A proposal accepted when its time is less than
+  an hour away is refused and dropped. The week after it ends by the default rule.
+- Nothing about the deadline changes without the partner's yes. One open proposal per pair; the proposer can
+  take it back; an open proposal lapses when its week seals.
 - The week's charges freeze at `week_end` (§8). The sealing job runs every 5 minutes, so it seals a little
   after `week_end`; nothing can change in between. For each ended, unsealed week it:
   1. Persists final statuses: `pending` becomes `guilty` and unresolved `appealed` becomes `dropped`, with
@@ -212,8 +226,8 @@ Worked examples (the unit tests must include these):
      change it.
   7. A card render and a reel render are queued (§11). Both members get a push (if enabled): the winner "You won
      the week. Gloat responsibly." and the loser "The verdict is in."
-- The winner can change the sentence until they first share the verdict or until Monday 20:00, whichever comes
-  first. After that it is locked. "Share" means the winner tapped any share or download control on the
+- The winner can change the sentence until they first share the verdict or for 24 hours after it is sealed,
+  whichever comes first (decided by the owner on 2026-10-14; it was Monday 20:00). After that it is locked. "Share" means the winner tapped any share or download control on the
   verdict or story screen: the client calls `POST /verdicts/:id/shared` before opening the share sheet, which
   sets `shared_at` (first time only) and `sentence_locked_at`. The loser sharing does not lock anything.
 - The loser marks the sentence as served; the winner confirms. An unconfirmed sentence shows on the tab as
@@ -231,9 +245,10 @@ Worked examples (the unit tests must include these):
 | Served | — | — | "I served it" until `served_at` is set, then "Waiting for <winner>" |
 | Confirm | "Confirm it's served" once `served_at` is set | Same | — |
 
-The tab's "Verdict on Sunday" chip opens the latest sealed verdict. Before the pair's first verdict it is not
-a button; it reads "First verdict <weekday> 20:00". A new verdict does not open by itself; the chip opens it
-(approved by the owner on 2026-10-12).
+The tab's chip names the deadline's weekday, "Verdict on Sunday"; before the pair's first verdict it reads
+"First verdict <weekday> <time>". It opens the deadline sheet: the exact time, **Settle now**, the moves, and
+"See the last verdict" once there is one. A verdict sealed at the deadline does not open by itself (approved by
+the owner on 2026-10-12); a settled one does.
 
 ## 11. Sharing
 
@@ -259,7 +274,9 @@ On iPhone this only works once the app is added to the Home Screen; the prompt s
 | Plea | filer | "<accused> owned it." / "<accused> cries foul: <crime title>. Your call." |
 | Appeal decided | accused | "<filer> says nice try. It counts." / "<filer> let it slide." |
 | Verdict sealed | both | winner / loser / tie texts in §10 |
-| Sentence reminder | loser | Wednesday 19:00 local, while a sentence is unconfirmed |
+| Sentence reminder | loser | Once per week, at its halfway point, while a sentence is unconfirmed (decided by the owner on 2026-10-14; it was Wednesday 19:00) |
+| Settle now or a move proposed | partner | "Maya wants to settle the tab right now! Ready to face the verdict?" / "Maya is moving the goalposts: verdict Fri 21:00. Deal?" |
+| Proposal answered | proposer | "Alex agreed. Verdict Fri 21:00." / "Alex says nope." / "Alex says not yet." |
 
 Max one push per event; charges filed within 2 minutes of each other are batched into one push. A charge's
 push is held 10 seconds so an undo can cancel it (§8).
@@ -269,7 +286,8 @@ push is held 10 seconds so an undo can cancel it (§8).
 ```
 users           id, created_at, last_seen_at
 sessions        id, user_id, token_hash, created_at, expires_at
-pairs           id, timezone, created_at, ended_at
+pairs           id, timezone, created_at, ended_at, cycle_start, cycle_end,
+                proposal_by, proposal_end, proposal_at                       index (cycle_end)
 members         id, pair_id, user_id, display_name, species, joined_at       unique (pair_id, species)
 invites         id, pair_id, token_hash, token_enc, created_by, expires_at, used_at, revoked_at
 charges         id, pair_id, week_start, filer_id, accused_id, crime_key, status,
@@ -287,7 +305,8 @@ push_subs       id, user_id, endpoint, keys jsonb, created_at
 All endpoints are under `/api`, use the session cookie, and return JSON. Errors use
 `{ error: { code, message } }` with stable codes (at least `not_in_pair`, `pair_incomplete`, `already_in_pair`,
 `invite_invalid`, `species_taken`, `rate_limited`, `undo_expired`, `already_pleaded`, `week_closed`,
-`not_allowed`, `sentence_locked`, `invalid_request` for a body that fails its schema).
+`not_allowed`, `sentence_locked`, `proposal_open`, `no_proposal`, `too_soon`, `too_far`, `invalid_request`
+for a body that fails its schema).
 
 ```
 GET    /me                               session, membership, pair summary
@@ -301,11 +320,15 @@ POST   /invites/:token/accept            { name, species }
 PATCH  /members/me                       { name?, species? }
 DELETE /pairs/current                    leave the pair
 GET    /tab                              current week: members, scores, owed by unit, charges, pending pleas,
-                                         unconfirmed sentences
+                                         unconfirmed sentences, the deadline and any open proposal
 POST   /charges                          { crimeKey }
 DELETE /charges/:id                      undo (filer, within 10 s, before any plea)
 POST   /charges/:id/plea                 { plea: "guilty" | "appeal" }
 POST   /charges/:id/appeal               { decision: "uphold" | "drop" }   (filer)
+POST   /deadline/proposal                { end: ISO time | null }   (null: settle now)
+POST   /deadline/proposal/accept         (the partner; settle now seals on the spot)
+POST   /deadline/proposal/decline        (the partner)
+DELETE /deadline/proposal                (the proposer takes it back)
 GET    /verdicts/latest
 GET    /verdicts/:id
 PATCH  /verdicts/:id/sentence            { sentenceKey }   (winner, before lock)
@@ -317,7 +340,8 @@ GET    /verdicts/:id/reel                302 to a signed MP4 URL (404 until rend
 GET    /events                           SSE stream for the pair: charge.created, charge.deleted, plea.guilty,
                                          plea.appeal, appeal.upheld, appeal.dropped, member.joined,
                                          member.updated, member.left, verdict.sealed,
-                                         verdict.updated. Each message is
+                                         verdict.settled (opens the verdict), verdict.updated,
+                                         deadline.proposed, deadline.decided. Each message is
                                          { type, chargeId? }; clients refetch /tab. 24 hours of silence
                                          sends plea.guilty too.
 POST   /push/subscriptions               { endpoint, keys }
@@ -335,9 +359,9 @@ OAuth, a Hebrew UI (names in Hebrew are supported), native apps, ads.
 | --- | --- | --- |
 | 1 | What happens to appeals still unresolved at the verdict? | Dropped (benefit of the doubt) (approved by the owner on 2026-10-12). |
 | 2 | Does a pending charge become guilty on its own? | Yes, after 24 hours without a plea. |
-| 3 | Verdict time | Sunday 20:00 in the pair's timezone. |
+| 3 | Verdict time | Sunday 20:00 in the pair's timezone by default; the pair can settle now or move the current deadline together (decided by the owner on 2026-10-14). Recurring 3/5/7-day cycles: not built. |
 | 4 | Tie | "Dead even" card (layout in `design.md` §6), no sentence, no reel (approved by the owner on 2026-10-12). A week with no charges seals as "Dead even" too. |
-| 5 | How long can the winner change the sentence? | Until first share or Monday 20:00 (approved by the owner on 2026-10-12). |
+| 5 | How long can the winner change the sentence? | Until first share or 24 hours after the verdict (decided by the owner on 2026-10-14). |
 | 6 | Account recovery when the cookie is lost | None in v1. Candidate for v1.1: a recovery link the user saves, or an emailed magic link. |
 | 7 | Filing limit | None (decided by the owner on 2026-10-14); only the 60 writes a minute guard of M7. |
 | 8 | Monetisation | None in v1. Earlier direction: cosmetic extras ($0.99–$4.99) such as more sentences or animal outfits. |

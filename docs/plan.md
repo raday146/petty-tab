@@ -466,48 +466,43 @@ Status: in review (`feat/phone-ux`), asked for by the owner on 2026-10-14 after 
 - Reference screens 06, 08–10 and 15 still show the owed pills and the floating button; those screenshot tests
   now compare the header and the score card's top row only (`BELOW_DUEL` in `e2e/screens.spec.ts`).
 
-## M8 · Flexible verdicts (proposal, not started)
-Status: proposal for the owner; nothing built. Opens spec Open decision 3 (verdict time).
+## M8 · Settle now and flexible deadlines
+Status: in review (`feat/m8-deadlines`). Plan approved by the owner on 2026-10-14. The core feature is
+**Settle now**; the second is moving the current deadline. Both need the partner's yes.
 
-The owner's rule: a pair chooses its cycle (3, 5 or 7 days) and its verdict time (weekday and hour), and an
-active deadline only moves when both agree.
+Done when:
+- [x] The pair stores its current cycle (`cycle_start`, `cycle_end`); pairs from before M8 are backfilled at
+      API start from their last verdict (`deadline.service.test.ts` "backfills pairs made before cycles were
+      stored")
+- [x] Sealing reads the stored cycle, seals, and starts the next one in the same transaction; twice is a no-op
+      and a sealer that was down catches up (`push.service.test.ts` "tells the winner and the loser apart…",
+      `verdicts.service.test.ts`); a charge filed after the deadline but before the sealer runs lands in the
+      next cycle (`cycleAt`, `week.test.ts`; `deadline.service.test.ts` "files a charge made after the
+      deadline…")
+- [x] Settle now: the partner gets a push and a card; Settle now seals on the spot and both phones open the
+      verdict (`deadline.service.test.ts` "seals the cycle the moment the partner says yes…",
+      `e2e/deadline.spec.ts` "Maya asks to settle now, Alex agrees, and both phones open the verdict")
+- [x] Moving the deadline: Deal moves the current deadline, Nope changes nothing, one proposal at a time,
+      withdraw, too soon / too far, stale on accept, lapses at sealing (`deadline.service.test.ts` "moving the
+      deadline", `e2e/deadline.spec.ts` "Maya moves the deadline…")
+- [x] The sentence locks at the first share or 24 hours after sealing (`week.test.ts` "sentenceDeadline")
+- [x] The reminder goes out once per cycle from its halfway point (`notify.test.ts` "reminderDue",
+      `push.service.test.ts` "the sentence reminder")
+- [x] The chip and "First verdict …" read the stored deadline (`charges.service.test.ts` "/tab")
+- [x] spec §2, §10, §12, §13, §14, Open decisions 3 and 5; design.md §6 (deadline sheet, proposal card)
+- The deadline sheet and the proposal card have no reference screenshot; the e2e report attaches the card
+  ("B: the settle-now card") for the owner's approval.
 
-Proposed rules (spec §10 would change with them):
-- A pair has a schedule: `cycle_days` (3, 5 or 7; default 7) and `verdict_time` (local hour and minute;
-  default 20:00). A 7-day cycle keeps a weekday; shorter cycles just run from one verdict to the next.
-- Either member can propose a new schedule. The proposal is `pending_partner_approval` until the partner
-  accepts or declines; one open proposal per pair. Nothing moves until both have said yes (the proposer's
-  yes is the proposal itself).
-- The partner sees a card on the tab, "Maya is moving the goalposts!" with the old and new deadline and
-  **Deal** / **Nope**, plus a push. The proposer can withdraw it. An open proposal expires at the current
-  deadline.
-- On accept, the current cycle's end moves to the next occurrence of the new verdict time that is at least
-  the cycle's minimum away (today's 48-hour rule, scaled to `min(48 h, cycle)`). Charges already filed stay in
-  the cycle. A deadline cannot move into the past or within the next hour.
-
-How it fits the code:
-- Today weeks are derived, not stored: `currentWeek(joinedAt, tz, now)` in `packages/shared/src/week.ts`.
-  Once the schedule can change mid-history, derivation from the join time breaks, so the pair stores its
-  current cycle: `pairs.cycle_start`, `pairs.cycle_end`, `cycle_days`, `verdict_time`. Past cycles already
-  live on their verdicts (`week_start`, `week_end`), and charges keep `week_start`.
-- Pure functions in `packages/shared` (tests first): `nextCycleEnd(start, schedule, tz)`,
-  `proposalTransition(state, actor, action)`, and `currentWeek` reading the stored cycle. The sealing job
-  seals when `cycle_end` has passed, then writes the next cycle in the same transaction (still idempotent).
-- One table, `schedule_proposals` (`pair_id`, `proposer_id`, `cycle_days`, `verdict_time`, `status`,
-  `created_at`, `decided_at`), with a partial unique index for one pending proposal per pair. Endpoints:
-  `POST /schedule/proposals`, `POST /schedule/proposals/:id/accept|decline|withdraw`. SSE events
-  `schedule.proposed` and `schedule.decided`; pushes through the existing `pushText`.
-- The UI reads the deadline from `/tab` (it already returns the week), so the chip ("Verdict Friday 21:00")
-  and the reminders follow the stored cycle with no copy hard-coded to Sunday.
+Defaults taken (flag to change): after a settle or a move the next cycle ends at the first Sunday 20:00 at least
+48 hours away; moves land 1 hour to 14 days ahead; the quick picks use the device clock; "right now" is
+lowercase (CLAUDE.md caps rule). Not built: recurring 3/5/7-day cycles, proposal history.
 
 Decided by the owner on 2026-10-14:
 1. An accepted change moves the **current** deadline at once (within the limits above).
 2. The winner can change the sentence until their first share or 24 hours after the verdict, for every cycle
    length (replaces "Monday 20:00"; `sentenceDeadline` in `week.ts`).
 3. The sentence reminder goes out at the halfway point of the cycle (replaces Wednesday 19:00;
-   `lastReminderTime` in `week.ts`).
-
-Next: plan mode for M8 (its "done when" list and steps) before any code.
+   `reminderTime` in `week.ts`).
 
 ### Product ideas for M8 and later (for the owner to pick)
 1. **Custom crimes.** The pair adds its own crimes (title, one line, a unit from the catalog, a sticker
