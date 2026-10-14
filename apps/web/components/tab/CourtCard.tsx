@@ -12,7 +12,7 @@ type Props = { charge: Charge; accused: Member } & (
       onAppeal: () => void;
     }
   | {
-      /** Shown to the filer: "<accused> appeals." */
+      /** Shown to the filer: "<accused> cries foul." */
       kind: 'appeal';
       onUphold: () => void;
       onDrop: () => void;
@@ -32,22 +32,22 @@ export function CourtCard(props: Props): ReactNode {
               <bdi>{props.filer.name}</bdi> says you did this.
             </p>
             <button type="button" onClick={props.onGuilty}>
-              Guilty
+              Fine, I did it
             </button>
             <button type="button" className={s.outline} onClick={props.onAppeal}>
-              Appeal
+              Not me!
             </button>
           </>
         ) : (
           <>
             <p>
-              <bdi>{accused.name}</bdi> appeals.
+              <bdi>{accused.name}</bdi> cries foul.
             </p>
             <button type="button" onClick={props.onUphold}>
-              Uphold
+              Nice try
             </button>
             <button type="button" className={s.outline} onClick={props.onDrop}>
-              Drop
+              Let it slide
             </button>
           </>
         )}

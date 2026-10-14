@@ -21,19 +21,19 @@ export function pushText(e: PushEvent): string {
     case 'joined':
       return `${e.name} joined as ${SPECIES[e.species].name.replace('The', 'the')}.`;
     case 'plea.guilty':
-      return `${e.name} pleads guilty.`;
+      return `${e.name} owned it.`;
     case 'plea.appeal':
-      return `${e.name} appeals: ${CRIMES[e.crimeKey].title}. Your call.`;
+      return `${e.name} cries foul: ${CRIMES[e.crimeKey].title}. Your call.`;
     case 'appeal.upheld':
-      return `${e.name} upheld it.`;
+      return `${e.name} says nice try. It counts.`;
     case 'appeal.dropped':
-      return `${e.name} dropped it.`;
+      return `${e.name} let it slide.`;
     case 'verdict.won':
-      return 'Court is adjourned. You won the week.';
+      return 'You won the week. Gloat responsibly.';
     case 'verdict.lost':
       return 'The verdict is in.';
     case 'verdict.tie':
-      return 'Dead even this week. The court is impressed.';
+      return 'Dead even this week. Suspiciously wholesome.';
     case 'reminder':
       // Default wording (spec §12 gives none), flagged in plan.md M6.
       return `You still owe ${e.name}: ${SENTENCES[e.sentenceKey].title}.`;

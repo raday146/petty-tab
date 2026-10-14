@@ -42,6 +42,11 @@
   --font-sans: var(--font-rubik), 'Heebo', 'Arial Hebrew', system-ui, -apple-system, 'Segoe UI', sans-serif;
 }
 
+/* iOS Safari: no page bounce; each screen scrolls its own inner area. */
+html,
+body {
+  overscroll-behavior: none;
+}
 body {
   background: var(--linen);
   color: var(--ink);

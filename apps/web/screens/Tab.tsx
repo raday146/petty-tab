@@ -21,7 +21,7 @@ import { Toast, useToast } from '@/components/Toast';
 import { CourtCard } from '@/components/tab/CourtCard';
 import { CrimeRow } from '@/components/tab/CrimeRow';
 import { CrimeTile } from '@/components/tab/CrimeTile';
-import { Scoreboard, type Member, type Owed } from '@/components/tab/Scoreboard';
+import { Scoreboard, Tally, type Member, type Owed } from '@/components/tab/Scoreboard';
 import { ApiFailure } from '@/lib/api';
 import { sfx } from '@/lib/sfx';
 import { InviteLink } from './InviteSheet';
@@ -59,6 +59,7 @@ const SLAM_MS = 1900;
 export function Tab(props: Props): ReactNode {
   const { me, them, inviteLink, firstVerdictDay, charges } = props;
   const [logOpen, setLogOpen] = useState(false);
+  const [tallyOpen, setTallyOpen] = useState(false);
   const [fresh, setFresh] = useState<string>();
   const [slam, setSlam] = useState<string>();
   const [bump, setBump] = useState<{ unit: UnitKey; n: number }>();
@@ -109,12 +110,12 @@ export function Tab(props: Props): ReactNode {
     try {
       id = await props.onFile!(crime);
     } catch (e) {
-      // spec §8: the 11th charge in 24 hours.
+      // M7's guard: more than 60 writes in a minute.
       if (e instanceof ApiFailure && e.code === 'rate_limited') {
         setUndoable(undefined);
         show({
-          title: 'The court needs a break',
-          message: 'Ten charges in a day is plenty. Try again tomorrow.',
+          title: 'Easy, tiger',
+          message: "That's a lot of crimes for one minute. Try again in a moment.",
         });
       }
       return;
@@ -135,9 +136,9 @@ export function Tab(props: Props): ReactNode {
     stamp(id);
     show(
       plea === 'guilty'
-        ? { title: 'You plead guilty', message: 'No contest.' }
+        ? { title: 'You owned it', message: 'Respect.' }
         : {
-            title: 'You appeal',
+            title: 'You cried foul',
             message: (
               <>
                 <bdi>{them.name}</bdi> decides.
@@ -190,14 +191,7 @@ export function Tab(props: Props): ReactNode {
             </button>
           </section>
         ) : (
-          <Scoreboard
-            me={me}
-            them={them}
-            lead={props.lead}
-            meOwed={props.meOwed}
-            themOwed={props.themOwed}
-            bump={bump}
-          />
+          <Scoreboard me={me} them={them} lead={props.lead} bump={bump} onOpen={() => setTallyOpen(true)} />
         )}
         {props.unconfirmed?.map((u, i) => (
           <p key={i} className={s.owes}>
@@ -257,6 +251,9 @@ export function Tab(props: Props): ReactNode {
               </Button>
             </div>
           )}
+          <Sheet open={tallyOpen} onClose={() => setTallyOpen(false)} title="Who owes what">
+            <Tally me={me} them={them} meOwed={props.meOwed} themOwed={props.themOwed} bump={bump} />
+          </Sheet>
           <Sheet
             open={logOpen}
             onClose={() => setLogOpen(false)}
