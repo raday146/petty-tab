@@ -1,15 +1,10 @@
 import { Injectable, Logger, type OnModuleInit } from '@nestjs/common';
 import webpush, { type PushSubscription } from 'web-push';
-import {
-  chargePushText,
-  PUSH_BATCH_MS,
-  UNDO_MS,
-  type CrimeKey,
-  type pushSubscriptionBody,
-} from '@petty-tab/shared';
+import { chargePushText, PUSH_BATCH_MS, UNDO_MS, type pushSubscriptionBody } from '@petty-tab/shared';
 import type { z } from 'zod';
 import { Clock } from './clock.js';
 import { Jobs, QUEUES } from './jobs.js';
+import { loadBook } from './book.js';
 import { PrismaService } from './prisma.service.js';
 
 /** One push to every device of a member's user. */
@@ -99,13 +94,13 @@ export class PushService implements OnModuleInit {
       return;
     }
     // Atomic claim: of two jobs running at once, only one gets the charges.
-    const claimed = await this.prisma.$queryRaw<{ crimeKey: CrimeKey; filerId: string }[]>`
+    const claimed = await this.prisma.$queryRaw<{ crimeKey: string; filerId: string; pairId: string }[]>`
       WITH c AS (
         UPDATE charges SET pushed_at = ${now}
         WHERE accused_id = ${accusedId}::uuid AND pushed_at IS NULL AND status = 'pending'
           AND created_at <= ${new Date(now.getTime() - UNDO_MS)}
-        RETURNING crime_key, filer_id, created_at)
-      SELECT crime_key AS "crimeKey", filer_id AS "filerId" FROM c ORDER BY created_at`;
+        RETURNING crime_key, filer_id, pair_id, created_at)
+      SELECT crime_key AS "crimeKey", filer_id AS "filerId", pair_id AS "pairId" FROM c ORDER BY created_at`;
     if (!claimed.length) return;
     const filer = await this.prisma.member.findUniqueOrThrow({ where: { id: claimed[0]!.filerId } });
     await this.notify(
@@ -113,6 +108,7 @@ export class PushService implements OnModuleInit {
       chargePushText(
         filer.displayName,
         claimed.map((c) => c.crimeKey),
+        await loadBook(this.prisma, claimed[0]!.pairId),
       ),
     );
   }

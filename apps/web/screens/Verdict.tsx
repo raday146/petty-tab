@@ -2,7 +2,14 @@
 
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { SPECIES } from '@petty-tab/art';
-import { CRIMES, SENTENCES, SENTENCE_KEYS, rng, type CrimeKey, type SentenceKey } from '@petty-tab/shared';
+import {
+  SENTENCES,
+  SENTENCE_KEYS,
+  rng,
+  topCrimeInfo,
+  type SentenceKey,
+  type TopCrime,
+} from '@petty-tab/shared';
 import { Art } from '@/components/Art';
 import { Button } from '@/components/Button';
 import { nudge, Screen } from '@/components/Screen';
@@ -19,7 +26,7 @@ export interface VerdictData {
   winner: Member;
   loser: Member;
   tie: boolean;
-  topCrimes: { crime: CrimeKey; count: number }[];
+  topCrimes: TopCrime[];
   sentence: SentenceKey;
   /** The sentence can no longer change (first winner share, or Monday 20:00). */
   locked: boolean;
@@ -222,7 +229,7 @@ export function VerdictCard({
                 art.scenes.verdict({
                   winner: v.winner.species,
                   loser: v.loser.species,
-                  tokens: v.topCrimes.map((t) => CRIMES[t.crime].sticker),
+                  tokens: v.topCrimes.map((t) => topCrimeInfo(t).sticker),
                 })
               }
             />
@@ -265,8 +272,8 @@ export function VerdictCard({
         <div className={s.chips}>
           {v.topCrimes.map((t, i) => (
             <span key={t.crime} className={s.chip} style={{ '--i': i } as CSSProperties}>
-              <Art draw={(art) => art.sticker(CRIMES[t.crime].sticker)} />
-              {CRIMES[t.crime].title}
+              <Art draw={(art) => art.sticker(topCrimeInfo(t).sticker)} />
+              {topCrimeInfo(t).title}
               {t.count > 1 && <i>×{t.count}</i>}
             </span>
           ))}

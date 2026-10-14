@@ -1,26 +1,38 @@
 import { z } from 'zod';
 import type { Species } from '@petty-tab/art';
-import { CRIME_KEYS, SENTENCE_KEYS, type ChargeStatus, type CrimeKey, type SentenceKey } from './catalog.ts';
+import {
+  CRIMES,
+  crimeInfo,
+  isCustomKey,
+  SENTENCE_KEYS,
+  stickerSchema,
+  type ChargeStatus,
+  type CrimeBook,
+  type SentenceKey,
+  type TopCrime,
+} from './catalog.ts';
 import { nameSchema, speciesSchema } from './identity.ts';
 import { rng } from './rng.ts';
 import { counts, tally } from './score.ts';
 
-export type TopCrime = { crime: CrimeKey; count: number };
+export type { TopCrime };
 
 /**
  * spec §10 steps 2–4, on the statuses sealing persists (pending counts as guilty, appealed as dropped, so
  * §8's `counts()` already gives the sealed result). `members` in join order: a tie keeps that order.
- * `points` are winner first. Top crimes are crime keys, never sticker keys.
+ * `points` are winner first. Top crimes are crime keys, never sticker keys; a custom crime also keeps its
+ * title and sticker, so the verdict never changes when the pair removes it.
  */
 export function judge(
-  charges: readonly { filerId: string; crime: CrimeKey; status: ChargeStatus; createdAt: Date }[],
+  charges: readonly { filerId: string; crime: string; status: ChargeStatus; createdAt: Date }[],
   members: readonly [string, string],
+  book: CrimeBook = CRIMES,
 ): { tie: boolean; winnerId: string; loserId: string; points: [number, number]; topCrimes: TopCrime[] } {
-  const { me, them } = tally(charges, members[0]);
+  const { me, them } = tally(charges, members[0], book);
   const [winnerId, loserId] = me >= them ? members : [members[1], members[0]];
   if (me === them) return { tie: true, winnerId, loserId, points: [me, them], topCrimes: [] };
 
-  const against = new Map<CrimeKey, { count: number; latest: number }>();
+  const against = new Map<string, { count: number; latest: number }>();
   for (const c of charges) {
     if (c.filerId !== winnerId || !counts(c.status)) continue;
     const row = against.get(c.crime) ?? { count: 0, latest: 0 };
@@ -29,7 +41,11 @@ export function judge(
   const topCrimes = [...against]
     .sort(([, a], [, b]) => b.count - a.count || b.latest - a.latest)
     .slice(0, 3)
-    .map(([crime, { count }]) => ({ crime, count }));
+    .map(([crime, { count }]): TopCrime => {
+      if (!isCustomKey(crime)) return { crime, count };
+      const { title, sticker } = crimeInfo(book, crime);
+      return { crime, count, title, sticker };
+    });
   return { tie: false, winnerId, loserId, points: [Math.max(me, them), Math.min(me, them)], topCrimes };
 }
 
@@ -58,10 +74,15 @@ export const renderInput = z.object({
   tie: z.boolean(),
   topCrimes: z
     .array(
-      z.object({
-        crime: z.enum(CRIME_KEYS as [CrimeKey, ...CrimeKey[]]),
-        count: z.number().int().positive(),
-      }),
+      z
+        .object({
+          crime: z.string().max(60),
+          count: z.number().int().positive(),
+          title: z.string().min(1).max(40).optional(),
+          sticker: stickerSchema.optional(),
+        })
+        // A catalog key alone, or any key with the title and sticker it was sealed with.
+        .refine((t) => t.crime in CRIMES || (t.title && t.sticker), 'Unknown crime.'),
     )
     .max(3),
   sentence: z.enum(SENTENCE_KEYS as [SentenceKey, ...SentenceKey[]]).nullable(),

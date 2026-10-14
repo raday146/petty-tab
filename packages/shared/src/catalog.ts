@@ -1,4 +1,5 @@
-import type { IconName, StickerKey } from '@petty-tab/art';
+import { z } from 'zod';
+import { STICKERS, type IconName, type StickerKey } from '@petty-tab/art';
 
 /** spec §6: the three currencies a charge adds to the tab. */
 export const UNITS = {
@@ -16,7 +17,7 @@ export function unitLabel(unit: UnitKey, count?: number): string {
   return `${count} ${count === 1 ? u.one : u.many}`;
 }
 
-interface Crime {
+export interface CrimeInfo {
   title: string;
   description: string;
   /** Draw with this, never with the crime key (`dj` draws as `tape`). */
@@ -86,10 +87,53 @@ export const CRIMES = {
     sticker: 'tape',
     unit: 'foot',
   },
-} as const satisfies Record<string, Crime>;
+} as const satisfies Record<string, CrimeInfo>;
 
 export type CrimeKey = keyof typeof CRIMES;
 export const CRIME_KEYS = Object.keys(CRIMES) as CrimeKey[];
+
+/** spec §6: a pair's own crime is filed and stored under this key. */
+export const customKey = (id: string): string => `custom:${id}`;
+export const isCustomKey = (key: string): boolean => key.startsWith('custom:');
+
+/** spec §6: the catalog plus a pair's own crimes, by the key charges store. */
+export type CrimeBook = Readonly<Record<string, CrimeInfo>>;
+export function bookFor(custom: readonly ({ id: string } & CrimeInfo)[]): CrimeBook {
+  return { ...CRIMES, ...Object.fromEntries(custom.map(({ id, ...c }) => [customKey(id), c])) };
+}
+
+const REMOVED: CrimeInfo = { title: 'A removed crime', description: '', sticker: 'crumbs', unit: 'coffee' };
+/** A crime by key; a key the book does not know reads as a removed crime rather than crashing. */
+export const crimeInfo = (book: CrimeBook, key: string): CrimeInfo => book[key] ?? REMOVED;
+
+/** A verdict's top crime: custom crimes carry their title and sticker, frozen at sealing (spec §10 step 6). */
+export type TopCrime = { crime: string; count: number; title?: string; sticker?: StickerKey };
+export function topCrimeInfo(t: TopCrime): { title: string; sticker: StickerKey } {
+  const c = t.title && t.sticker ? t : crimeInfo(CRIMES, t.crime);
+  return { title: c.title!, sticker: c.sticker! };
+}
+
+/** User text: trimmed, inner whitespace collapsed. */
+const text = (min: number, max: number) =>
+  z
+    .string()
+    .transform((s) => s.trim().replace(/\s+/g, ' '))
+    .pipe(z.string().min(min).max(max));
+
+export const UNIT_KEYS = Object.keys(UNITS) as UnitKey[];
+export const stickerSchema = z.enum(STICKERS as [StickerKey, ...StickerKey[]]);
+
+/** spec §6: `POST /crimes`. `chore`: a daily chore for the creator ('me') or the partner ('them'). */
+export const customCrimeBody = z.object({
+  title: text(1, 40),
+  description: text(0, 80),
+  unit: z.enum(UNIT_KEYS as [UnitKey, ...UnitKey[]]),
+  sticker: stickerSchema,
+  chore: z.enum(['me', 'them']).nullable(),
+});
+/** spec §6: how many crimes of its own a pair can have at once. */
+export const CUSTOM_CRIMES_MAX = 30;
+export type CustomCrimeInput = z.input<typeof customCrimeBody>;
 
 /** spec §7. */
 export const SENTENCES = {

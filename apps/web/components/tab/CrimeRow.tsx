@@ -1,6 +1,6 @@
-import type { ReactNode } from 'react';
+import { createContext, useContext, type ReactNode } from 'react';
 import type { Face } from '@petty-tab/art';
-import { CRIMES, type ChargeStatus, type CrimeKey } from '@petty-tab/shared';
+import { CRIMES, crimeInfo, type ChargeStatus, type CrimeBook } from '@petty-tab/shared';
 import { cx } from '@/lib/cx';
 import { AnimalSticker } from '../AnimalSticker';
 import { Pill } from '../Pill';
@@ -26,9 +26,13 @@ const SAY: Record<ChargeStatus, string> = {
   dropped: 'let slide',
 };
 
+/** The pair's crime book (spec §6): the catalog plus its own crimes. The tab provides it. */
+export const Book = createContext<CrimeBook>(CRIMES);
+
 export interface Charge {
   id: string;
-  crime: CrimeKey;
+  /** A catalog key or `custom:<id>`. */
+  crime: string;
   status: ChargeStatus;
 }
 
@@ -44,7 +48,7 @@ interface Props {
 }
 
 export function CrimeRow({ charge, accused, isNew, slam, inCard }: Props): ReactNode {
-  const crime = CRIMES[charge.crime];
+  const crime = crimeInfo(useContext(Book), charge.crime);
   const status = charge.status;
   return (
     <div className={cx(s.row, inCard && s.flush, isNew && s.new, slam && s.slam)}>

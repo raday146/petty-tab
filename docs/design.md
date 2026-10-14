@@ -83,10 +83,12 @@ No italics anywhere. Uppercase is only for stamps and the reel's cold open.
 | Crime row | Grid: 48px sticker · title (1fr) · pill. 12px vertical padding, no dividers, no meta text. |
 | Plea card | Shown to the accused only. Butter card: a crime row, then "<bdi>Maya</bdi> says you did this." with **Fine, I did it** (ink) and **Not me!** (outline) buttons, 40px tall. (The prototype's card reads "Alex pleads…" because it is drawn on the filer's phone; see spec §8.) |
 | Appeal card | Shown to the filer only. Same card as the plea card: the crime row, then "<bdi>Alex</bdi> is disputing this! What's the call?" on its own line above **Nice try** (ink) and **Let it slide** (outline). Nice try slams GUILTY; Let it slide fades the row to its dropped state. |
-| Scoreboard | Paper card, one tap target. My sticker and name · rope + "Maya leads by 5" · partner sticker and name; after a dashed line, "Who owes what" (13.5px, 600, mute). A tap opens the tally sheet: "Maya is owed" pills · "Alex is owed" pills. The lead line bumps when my score goes up. (Changed on 2026-10-14 after the phone test: the owed pills crowded a small phone; reference screens 06, 08–10 and 15 still show them.) |
+| Scoreboard | Paper card, one tap target. My sticker and name · rope + "Maya leads by 5" · partner sticker and name; after a dashed line, "Who owes what" (13.5px, 600, mute). A tap opens the **Breakdown** screen (M9; the dev screens still open the tally sheet: "Maya is owed" pills · "Alex is owed" pills). The lead line bumps when my score goes up. (Changed on 2026-10-14 after the phone test: the owed pills crowded a small phone; reference screens 06, 08–10 and 15 still show them.) |
 | Rope | 3px track at 16% ink, a centre tick, a 20px mustard marker with a 2.5px ink ring; moves with a springy 550ms ease. |
 | Animal card | Paper card: 120px tinted portrait panel (`art.portrait`), title, one-line bio. Selected: 3px mustard ring and a mustard check badge. Partner's animal: an ink chip with the partner's name. When the count is odd, the last card spans both columns with the portrait on the left. |
-| Crime tile | Linen tile: 54px sticker (tilted ±4°), title, pill. |
+| Crime tile | Linen tile: 54px sticker (tilted ±4°), title, pill. The pair's own crimes use the same tile. |
+| New crime sheet | M9. Sheet "A crime of your own": "What's the crime?" and "In one line" fields (46px, 14px radius, 1.5px ink border), "It costs" unit pills, a "Sticker" grid of the ten stickers (52px linen squares, the picked one butter with a 3px mustard ring), "Daily chore?" pills (No · Mine · <partner>'s), a mute note when a chore is picked, and **Add it**. |
+| Chores strip | M9. Under the scoreboard, only when the pair has chores. Paper rows, 44px: a 24px tick box, the title, and "Tap when done" / "Done today" at the end. Mine are buttons (`aria-pressed`); the partner's read "<bdi>Alex</bdi>: Dishes duty · Not yet". |
 | Bottom sheet | Paper, 40×4px grab handle, title, content, scrim `rgba(27,36,64,.4)`. |
 | Toast | Ink card at the top, bold mustard title line + one sentence. 2.7s. The filing toast adds an **Undo** text button (mustard, end-aligned) and stays 10s; it disappears early if the accused pleads. |
 | Stamp | Crimson text and 3px border, slight rotation, ink-texture filter, `mix-blend-mode: multiply`. |
@@ -155,6 +157,17 @@ prototype's "Invite your partner" button and pre-filled name chip are placeholde
   do?" and a two-column grid of crime tiles. Picking one files it, closes the sheet, bumps the lead line, and
   shows a toast with the crime's description.
 
+- Picker sheet (M9): the pair's own crimes first, then the catalog, then underlined "+ New crime or chore" and
+  "Edit your list" (the pair's own crimes with **Remove**).
+
+### The Breakdown (M9; no reference screen, deliberate)
+- Full screen on linen with the round Back button, title "The breakdown", then paper section cards:
+  **Who owes what** (the owed pills), **This week** ("What <bdi>Alex</bdi> did": sticker, title, ×count; "2 let
+  slide."), **Chores this week** (done and ghosted days), **All-time** (wins, ties, each person's "signature
+  move"), **Past verdicts** (date · winner · points · top crime).
+- Each section ends with one playful line from `breakdown()` in `packages/shared` ("<bdi>Alex</bdi> has 3 ×
+  The Phantom Sip. The fridge remembers.", "Someone call a referee."); names open the line in `<bdi>`.
+
 ### The Sunday verdict (`11`, `12`, `13`, `16`)
 The card is the shareable 9:16 image; the app chrome sits over it and is never part of the export.
 - Card (paper, full width, 693px tall on a 390px screen):
@@ -202,8 +215,11 @@ Inside, the reel plays from `packages/reel` (`reel.md`). Hold to pause.
 
 ## 8. Sound
 
-All UI sounds are synthesised with the Web Audio API (no audio files), through a compressor and a 0.45 master
-gain, and only after the first user gesture. A sound toggle lives in settings and on the story preview.
+All UI sounds are synthesised with the Web Audio API (no audio files), through a compressor and a 0.9 master
+gain (0.45 until the M9 phone test: too quiet on phones), and only after the first user gesture. The audio
+context is created and resumed inside a tap with a silent buffer (iOS starts audio only in a gesture), and
+resumed on every later tap and on returning to the tab. Stamp, bump and filing also vibrate where the
+platform supports it (not iOS Safari). A sound toggle lives in settings and on the story preview.
 
 | Sound | Recipe |
 | --- | --- |
@@ -215,8 +231,9 @@ gain, and only after the first user gesture. A sound toggle lives in settings an
 | paper | band-passed noise 3200→1300 Hz 200ms |
 | thump | sine 140→70 Hz 120ms + noise 400→200 Hz 50ms |
 | chime | sines 1319, 1760, 2637 Hz staggered 80ms |
+| bump | sine 523 Hz 90ms, then 784 Hz 160ms (the score bump, M9) |
 
-Exact gains and envelopes: see the `sfx` object in `reference/prototype.html`. The reel's sounds are in
+Envelopes: see the `sfx` object in `reference/prototype.html`; gains are raised in `apps/web/lib/sfx.ts`. The reel's sounds are in
 `reel.md`.
 
 ## 9. Voice and copy

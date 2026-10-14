@@ -141,12 +141,12 @@ function TabDemo(props: {
         const id = `new-${seq}`;
         setSeq(seq + 1);
         setCharges((cs) => [{ id, crime, status: 'pending', filer: 'me' }, ...cs]);
-        filed(crime, 1);
+        filed(crime as CrimeKey, 1);
         return id;
       }}
       onUndo={(id, crime) => {
         setCharges((cs) => cs.filter((c) => c.id !== id));
-        filed(crime, -1);
+        filed(crime as CrimeKey, -1);
       }}
       onPlea={(id, plea) => status(id, plea === 'guilty' ? 'guilty' : 'appealed')}
       onDecide={(id, decision) => status(id, decision === 'uphold' ? 'upheld' : 'dropped')}

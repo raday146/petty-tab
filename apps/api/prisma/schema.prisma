@@ -50,6 +50,7 @@ model Pair {
   invites     Invite[]
   charges     Charge[]
   verdicts    Verdict[]
+  crimes      CustomCrime[]
 
   @@index([cycleEnd])
   @@map("pairs")
@@ -67,6 +68,8 @@ model Member {
   invites     Invite[]
   filed       Charge[] @relation("filer")
   accused     Charge[] @relation("accused")
+  created     CustomCrime[] @relation("creator")
+  chores      CustomCrime[] @relation("choreOwner")
 
   @@unique([pairId, species])
   @@index([userId])
@@ -151,6 +154,46 @@ model Verdict {
 
   @@unique([pairId, weekStart])
   @@map("verdicts")
+}
+
+/// spec §6: a pair's own crimes. Charges store them as `custom:<id>` in crime_key.
+model CustomCrime {
+  id           String     @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  pairId       String     @map("pair_id") @db.Uuid
+  pair         Pair       @relation(fields: [pairId], references: [id], onDelete: Cascade)
+  createdBy    String     @map("created_by") @db.Uuid
+  creator      Member     @relation("creator", fields: [createdBy], references: [id], onDelete: Cascade)
+  /// User text, ≤ 40 and ≤ 80: shown as text, never passed to packages/art.
+  title        String
+  description  String
+  /// A StickerKey and a UnitKey of @petty-tab/shared, checked by the request schema.
+  sticker      String
+  unit         String
+  /// spec §8: set, a daily chore this member ticks; null, an ordinary crime.
+  choreOwnerId String?    @map("chore_owner_id") @db.Uuid
+  choreOwner   Member?    @relation("choreOwner", fields: [choreOwnerId], references: [id], onDelete: Cascade)
+  createdAt    DateTime   @default(now()) @map("created_at") @db.Timestamptz
+  /// Out of the picker; old charges and verdicts still read it.
+  removedAt    DateTime?  @map("removed_at") @db.Timestamptz
+  days         ChoreDay[]
+
+  @@index([pairId])
+  @@map("custom_crimes")
+}
+
+/// spec §8: one row per chore and local day, ticked done or charged as neglected. The key makes the
+/// midnight sweep idempotent.
+model ChoreDay {
+  crimeId  String      @map("crime_id") @db.Uuid
+  crime    CustomCrime @relation(fields: [crimeId], references: [id], onDelete: Cascade)
+  /// The local date in the pair's timezone.
+  day      DateTime    @db.Date
+  doneAt   DateTime?   @map("done_at") @db.Timestamptz
+  /// The charge filed when the day ended unticked.
+  chargeId String?     @map("charge_id") @db.Uuid
+
+  @@id([crimeId, day])
+  @@map("chore_days")
 }
 
 /// spec §12: one Web Push subscription per device. A device that changes user moves over (unique endpoint).

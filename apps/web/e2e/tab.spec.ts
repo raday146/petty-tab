@@ -14,11 +14,17 @@ async function file(page: Page, crime: string): Promise<void> {
     .click();
 }
 
-/** Opens the tally sheet (a tap on the scoreboard) and returns what `name` is owed in it. */
-async function owed(page: Page, name: string) {
-  const sheet = page.getByRole('dialog', { name: 'Who owes what' });
-  if (!(await sheet.isVisible())) await page.getByRole('button', { name: /Who owes what/ }).click();
-  return sheet.locator('div', { has: page.getByText(`${name} is owed`) }).last();
+/** Opens the Breakdown (a tap on the scoreboard), checks what `name` is owed there, and goes back. */
+async function expectOwed(page: Page, name: string, text: string): Promise<void> {
+  await page.getByRole('button', { name: /Who owes what/ }).click();
+  const screen = page.getByRole('main', { name: 'The breakdown' });
+  await expect(
+    screen
+      .locator('div', { has: page.getByText(`${name} is owed`) })
+      .last()
+      .getByText(text),
+  ).toBeVisible();
+  await screen.getByRole('button', { name: 'Back to the tab' }).click();
 }
 const lead = (page: Page, text: string) => page.getByText(text, { exact: true });
 const row = (page: Page, state: string) => page.getByText(new RegExp(`, \\w+, ${state}$`));
@@ -47,7 +53,7 @@ test('A files Trash Jenga, B pleads guilty live, A sees the stamp and the score 
   await expect(lead(a, 'Maya leads by 1')).toHaveClass(/bump/);
   await expect(a.getByRole('button', { name: 'Undo' })).toBeHidden();
   await expect(row(a, 'guilty')).toHaveCount(1);
-  await expect((await owed(a, 'Maya')).getByText('1 dish load')).toBeVisible();
+  await expectOwed(a, 'Maya', '1 dish load');
 });
 
 test('B cries foul, A sees the card live and says nice try; the charge counts again', async ({
@@ -64,10 +70,10 @@ test('B cries foul, A sees the card live and says nice try; the charge counts ag
 
   await expect(stamp(a)).toBeVisible();
   await expect(row(a, 'counts')).toHaveCount(1);
-  await expect((await owed(a, 'Maya')).getByText('1 coffee')).toBeVisible();
+  await expectOwed(a, 'Maya', '1 coffee');
   await expect(stamp(b)).toBeVisible(live);
   await expect(row(b, 'counts')).toHaveCount(1);
-  await expect((await owed(b, 'Maya')).getByText('1 coffee')).toBeVisible();
+  await expectOwed(b, 'Maya', '1 coffee');
   await shot(b, info, 'B: it counts');
 });
 
@@ -79,7 +85,7 @@ test('Undo inside 10 seconds removes the charge for both', async ({ browser }) =
 
   await expect(b.getByText('Maya says you did this.')).toBeHidden(live);
   await expect(row(a, 'pending')).toHaveCount(0);
-  await expect((await owed(a, 'Maya')).getByText('nothing')).toBeVisible();
+  await expectOwed(a, 'Maya', 'nothing');
 });
 
 test('there is no daily cap: an 11th charge in a row is filed', async ({ browser }) => {

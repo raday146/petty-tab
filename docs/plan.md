@@ -504,6 +504,34 @@ Decided by the owner on 2026-10-14:
 3. The sentence reminder goes out at the halfway point of the cycle (replaces Wednesday 19:00;
    `reminderTime` in `week.ts`).
 
+## M9 · Custom crimes, daily chores, the Breakdown, louder sound
+Status: in review (`feat/m9-custom-crimes`). Plan approved by the owner on 2026-10-14, with these answers: the
+creator picks the unit; an unticked chore day is charged automatically at midnight; the Breakdown keeps all
+history.
+
+Done when:
+- [x] Either member adds a crime of the pair's own or removes one; it files, pleads, scores and seals like a
+      catalog crime (`crimes.service.test.ts` "files, pleads and scores like a catalog crime…",
+      `catalog.test.ts`, `score.test.ts` "tally with custom crimes", `e2e/crimes.spec.ts` "Maya adds her own
+      crime, files it, and Alex owns it")
+- [x] A verdict keeps a custom top crime's title after it is removed (`verdict.test.ts` "judge with custom
+      crimes", `crimes.service.test.ts` "keeps a custom top crime's title…"); old snapshots still read
+      (`catalog.test.ts` "topCrimeInfo")
+- [x] Daily chores: only the owner ticks; an unticked day is charged once at midnight, never a ticked day or
+      the creation day; a removed chore stops (`crimes.service.test.ts` "daily chores", `week.test.ts` "chore
+      days", `e2e/crimes.spec.ts` "Alex ticks his daily chore…")
+- [x] The Breakdown: this week by crime, chores, past verdicts, all-time wins, streak and signature crimes,
+      with a line each (`breakdown.test.ts`, `e2e/verdict.spec.ts` "the breakdown shows…")
+- [x] Sound: the context starts inside the tap, resumes after interruptions, a louder mix, the bump sound,
+      haptics where supported (`lib/sfx.ts`; to verify on the phones: the silent switch, `AUDIO_SESSION`)
+- [x] spec §6, §8, §12–§15; design.md §5, §6, §8
+- The New crime sheet, the chores strip and the Breakdown have no reference screens; the e2e report attaches
+  "A: the new crime form" and "A: the breakdown" for the owner's approval.
+
+Defaults approved by the owner on 2026-10-14: 30 own crimes per pair; either member adds or removes; no editing; the chore's
+creation day is never charged; only the owner ticks; the sweep catches up two days; haptics follow the sound
+toggle.
+
 ### Product ideas for M8 and later (for the owner to pick)
 1. **Custom crimes.** The pair adds its own crimes (title, one line, a unit from the catalog, a sticker
    picked from the art package). A `custom_crimes` table per pair; charges reference a catalog key or a
