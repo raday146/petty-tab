@@ -528,7 +528,7 @@ Done when:
 - The New crime sheet, the chores strip and the Breakdown have no reference screens; the e2e report attaches
   "A: the new crime form" and "A: the breakdown" for the owner's approval.
 
-Defaults taken (flag to change): 30 own crimes per pair; either member adds or removes; no editing; the chore's
+Defaults approved by the owner on 2026-10-14: 30 own crimes per pair; either member adds or removes; no editing; the chore's
 creation day is never charged; only the owner ticks; the sweep catches up two days; haptics follow the sound
 toggle.
 
