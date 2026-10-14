@@ -6,8 +6,10 @@ import { RENDER_QUEUES } from '@petty-tab/shared';
 export const QUEUES = {
   chargePush: 'charge-push',
   autoGuilty: 'auto-guilty',
+  // spec §8: the midnight sweep that charges unticked chores.
+  chores: 'chores',
   seal: 'seal',
-  // spec §12: one push to a member's devices, and the Wednesday sentence reminder sweep.
+  // spec §12: one push to a member's devices, and the halfway-point sentence reminder sweep.
   push: 'push',
   reminder: 'reminder',
   // spec §4.7: deletes pairs 30 days after they ended.

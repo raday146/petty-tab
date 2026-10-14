@@ -1,8 +1,15 @@
 import { Injectable, type OnModuleInit } from '@nestjs/common';
 import {
+  bookFor,
   canUndo,
+  choreDaysDue,
+  crimeInfo,
+  customKey,
   cycleAt,
+  dayEnd,
   deadlineLabel,
+  isCustomKey,
+  localDay,
   PLEA_MS,
   pushText,
   tally,
@@ -11,13 +18,15 @@ import {
   type appealBody,
   type fileChargeBody,
   type pleaBody,
-  type CrimeKey,
   type SentenceKey,
+  type StickerKey,
+  type UnitKey,
   type Species,
   type TabView,
   type VerdictSnapshot,
 } from '@petty-tab/shared';
 import { z } from 'zod';
+import { loadBook } from './book.js';
 import { Clock } from './clock.js';
 import { ApiError } from './errors.js';
 import { Events } from './events.js';
@@ -54,6 +63,9 @@ export class ChargesService implements OnModuleInit {
     const { boss } = this.jobs;
     await boss.work(QUEUES.autoGuilty, () => this.autoGuilty());
     await boss.schedule(QUEUES.autoGuilty, '* * * * *');
+    // Every 15 minutes, so local midnight in :30 and :45 zones is never more than a sweep late.
+    await boss.work(QUEUES.chores, () => this.neglectedChores());
+    await boss.schedule(QUEUES.chores, '*/15 * * * *');
   }
 
   /** The caller, the partner and the current week; `pair_incomplete` while waiting. */
@@ -84,6 +96,15 @@ export class ChargesService implements OnModuleInit {
   async file(userId: string, body: z.output<typeof fileChargeBody>): Promise<{ id: string }> {
     const { me, them, week } = await this.complete(userId);
     const now = this.clock.now();
+    // spec §6: a crime of the pair's own, still in the picker.
+    if (
+      isCustomKey(body.crimeKey) &&
+      !(await this.prisma.customCrime.findFirst({
+        where: { id: body.crimeKey.slice('custom:'.length), pairId: me.pairId, removedAt: null },
+      }))
+    ) {
+      throw new ApiError(404, 'not_allowed', 'That crime is not on your list.');
+    }
     const { id } = await this.prisma.charge.create({
       data: {
         pairId: me.pairId,
@@ -143,7 +164,11 @@ export class ChargesService implements OnModuleInit {
       pushText(
         body.plea === 'guilty'
           ? { type: 'plea.guilty', name }
-          : { type: 'plea.appeal', name, crimeKey: charge.crimeKey as CrimeKey },
+          : {
+              type: 'plea.appeal',
+              name,
+              title: crimeInfo(await loadBook(this.prisma, charge.pairId), charge.crimeKey).title,
+            },
       ),
     );
   }
@@ -164,15 +189,35 @@ export class ChargesService implements OnModuleInit {
 
   async tab(userId: string): Promise<TabView> {
     const { me, them, week } = await this.complete(userId);
-    const [rows, verdicts] = await Promise.all([
+    const today = new Date(localDay(this.clock.now(), me.pair.timezone));
+    const [rows, verdicts, own] = await Promise.all([
       this.prisma.charge.findMany({
         where: { pairId: me.pairId, weekStart: week.start },
         orderBy: { createdAt: 'asc' },
       }),
       this.prisma.verdict.findMany({ where: { pairId: me.pairId }, orderBy: { weekStart: 'asc' } }),
+      this.prisma.customCrime.findMany({
+        where: { pairId: me.pairId },
+        include: { days: { where: { day: today, doneAt: { not: null } } } },
+        orderBy: { createdAt: 'asc' },
+      }),
     ]);
-    const charges = rows.map((c) => ({ ...c, crime: c.crimeKey as CrimeKey }));
-    const { lead, meOwed, themOwed } = tally(charges, me.id);
+    const custom = own.map((c) => ({
+      id: c.id,
+      title: c.title,
+      description: c.description,
+      sticker: c.sticker as StickerKey,
+      unit: c.unit as UnitKey,
+      removed: c.removedAt !== null,
+      chore: c.choreOwnerId
+        ? {
+            owner: c.choreOwnerId === me.id ? ('me' as const) : ('them' as const),
+            doneToday: c.days.length > 0,
+          }
+        : null,
+    }));
+    const charges = rows.map((c) => ({ ...c, crime: c.crimeKey }));
+    const { lead, meOwed, themOwed } = tally(charges, me.id, bookFor(custom));
     return {
       me: { name: me.displayName, species: me.species as Species },
       them: { name: them.displayName, species: them.species as Species },
@@ -185,6 +230,7 @@ export class ChargesService implements OnModuleInit {
         status: c.status,
         filer: c.filerId === me.id ? 'me' : 'them',
       })),
+      custom,
       hasVerdict: verdicts.length > 0,
       deadline: { end: week.end.toISOString(), label: deadlineLabel(week.end, me.pair.timezone) },
       proposal: me.pair.proposalBy
@@ -201,5 +247,62 @@ export class ChargesService implements OnModuleInit {
           return { winner: snap.winner.name, loser: snap.loser.name, sentence: v.sentenceKey as SentenceKey };
         }),
     };
+  }
+
+  /**
+   * spec §8: a chore day that ended unticked files one charge, from the partner against the chore's owner, at
+   * the day's end. The (crime_id, day) key makes a second sweep a no-op; a tick inserts the same row first.
+   */
+  async neglectedChores(now = this.clock.now(), only?: { pairId: string }): Promise<number> {
+    const chores = await this.prisma.customCrime.findMany({
+      where: {
+        pairId: only?.pairId,
+        choreOwnerId: { not: null },
+        removedAt: null,
+        pair: { endedAt: null, cycleEnd: { not: null } },
+      },
+      include: { pair: { include: { members: true } } },
+    });
+    let filed = 0;
+    for (const chore of chores) {
+      const { pair } = chore;
+      const owner = chore.choreOwnerId!;
+      const partner = pair.members.find((m) => m.id !== owner);
+      if (!partner) continue;
+      for (const day of choreDaysDue(chore.createdAt, pair.timezone, now)) {
+        const end = dayEnd(day, pair.timezone);
+        // ponytail: a day that ended in an already sealed cycle (the sweep was down across a verdict) is
+        // charged in the current one: cycleAt never goes back before the stored cycle.
+        const week = currentCycle(pair, end);
+        const charged = await this.prisma.$transaction(async (tx) => {
+          const [row] = await tx.$queryRaw<unknown[]>`
+            INSERT INTO chore_days (crime_id, day) VALUES (${chore.id}::uuid, ${day}::date)
+            ON CONFLICT DO NOTHING RETURNING crime_id`;
+          if (!row) return null;
+          const charge = await tx.charge.create({
+            data: {
+              pairId: pair.id,
+              weekStart: week.start,
+              filerId: partner.id,
+              accusedId: owner,
+              crimeKey: customKey(chore.id),
+              createdAt: end,
+              // Its own push below, not the "Maya filed" one.
+              pushedAt: now,
+            },
+          });
+          await tx.choreDay.update({
+            where: { crimeId_day: { crimeId: chore.id, day: new Date(day) } },
+            data: { chargeId: charge.id },
+          });
+          return charge.id;
+        });
+        if (!charged) continue;
+        filed++;
+        this.events.emit(pair.id, 'charge.created', charged);
+        await this.push.notify(owner, pushText({ type: 'chore.neglected', title: chore.title }));
+      }
+    }
+    return filed;
   }
 }

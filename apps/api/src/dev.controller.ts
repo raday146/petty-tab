@@ -1,4 +1,7 @@
-import { Controller, HttpCode, Post } from '@nestjs/common';
+import { Body, Controller, HttpCode, Post } from '@nestjs/common';
+import { z } from 'zod';
+import { ChargesService } from './charges.service.js';
+import { parse } from './errors.js';
 import { PairingService } from './pairing.service.js';
 import { UserId } from './session.middleware.js';
 import { VerdictsService } from './verdicts.service.js';
@@ -13,7 +16,17 @@ export class DevController {
   constructor(
     private readonly pairing: PairingService,
     private readonly verdicts: VerdictsService,
+    private readonly charges: ChargesService,
   ) {}
+
+  /** Runs the caller's pair's midnight chore sweep as if it were `at`. */
+  @Post('chores/sweep')
+  @HttpCode(204)
+  async sweep(@UserId() userId: string, @Body() body: unknown): Promise<void> {
+    const { at } = parse(z.object({ at: z.iso.datetime() }), body);
+    const { pairId } = await this.pairing.inPair(userId);
+    await this.charges.neglectedChores(new Date(at), { pairId });
+  }
 
   @Post('seal')
   @HttpCode(204)
