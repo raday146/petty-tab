@@ -490,10 +490,10 @@ Done when:
       `push.service.test.ts` "the sentence reminder")
 - [x] The chip and "First verdict …" read the stored deadline (`charges.service.test.ts` "/tab")
 - [x] spec §2, §10, §12, §13, §14, Open decisions 3 and 5; design.md §6 (deadline sheet, proposal card)
-- The deadline sheet and the proposal card have no reference screenshot; the e2e report attaches the card
+- The deadline sheet and the proposal card have no reference screenshot (layout approved by the owner on 2026-10-14); the e2e report attaches the card
   ("B: the settle-now card") for the owner's approval.
 
-Defaults taken (flag to change): after a settle or a move the next cycle ends at the first Sunday 20:00 at least
+Defaults approved by the owner on 2026-10-14, with the deadline sheet layout: after a settle or a move the next cycle ends at the first Sunday 20:00 at least
 48 hours away; moves land 1 hour to 14 days ahead; the quick picks use the device clock; "right now" is
 lowercase (CLAUDE.md caps rule). Not built: recurring 3/5/7-day cycles, proposal history.
 
