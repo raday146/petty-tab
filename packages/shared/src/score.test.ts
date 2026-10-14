@@ -1,3 +1,4 @@
+import { bookFor } from './catalog.ts';
 import { describe, expect, it } from 'vitest';
 import { ropePosition, tally } from './score.ts';
 import type { ChargeStatus, CrimeKey } from './catalog.ts';
@@ -98,5 +99,16 @@ describe('tally (spec §9 worked examples)', () => {
   it('is the same tab from the other side', () => {
     const charges = [c(MAYA, 'sip', 'guilty'), c(ALEX, 'clock', 'guilty'), c(ALEX, 'dj', 'pending')];
     expect(tally(charges, ALEX)).toMatchObject({ me: 2, them: 1, lead: 1 });
+  });
+});
+
+describe('tally with custom crimes', () => {
+  it('counts a custom crime in the unit its creator picked', () => {
+    const book = bookFor([
+      { id: 'tp', title: 'Toilet paper roulette', description: '', sticker: 'roll', unit: 'foot' },
+    ]);
+    expect(tally([{ filerId: 'maya', crime: 'custom:tp', status: 'guilty' }], 'maya', book).meOwed).toEqual([
+      { unit: 'foot', count: 1 },
+    ]);
   });
 });

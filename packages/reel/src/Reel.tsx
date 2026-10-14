@@ -9,7 +9,7 @@ import {
   type Ref,
 } from 'react';
 import { createArt, type Species, type StickerKey } from '@petty-tab/art';
-import { CRIMES, SENTENCES, type RenderInput } from '@petty-tab/shared';
+import { SENTENCES, topCrimeInfo, type RenderInput } from '@petty-tab/shared';
 import { CUES, master } from './audio.ts';
 import {
   DURATION,
@@ -385,6 +385,6 @@ export function reelInput(r: RenderInput): ReelInput {
     winner: r.winner,
     loser: r.loser,
     sentence: r.sentence ? SENTENCES[r.sentence].title : '',
-    tokens: r.topCrimes.map((c) => CRIMES[c.crime].sticker),
+    tokens: r.topCrimes.map((c) => topCrimeInfo(c).sticker),
   };
 }
