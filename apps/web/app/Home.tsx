@@ -3,7 +3,14 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { ORDER, type Species } from '@petty-tab/art';
 import { reelInput } from '@petty-tab/reel';
-import { SENTENCES, type CrimeKey, type Me, type TabView, type VerdictView } from '@petty-tab/shared';
+import {
+  SENTENCES,
+  type CrimeKey,
+  type Me,
+  type TabEvent,
+  type TabView,
+  type VerdictView,
+} from '@petty-tab/shared';
 import { Button } from '@/components/Button';
 import { api } from '@/lib/api';
 import {
@@ -156,7 +163,11 @@ function Pair({
       void loadTab();
       if (verdictId.current) void loadVerdict(verdictId.current);
     };
-    events.onmessage = sync;
+    events.onmessage = (m: MessageEvent<string>) => {
+      sync();
+      // spec §10: a settle-now verdict opens on both phones; a verdict at the deadline waits for the chip.
+      if ((JSON.parse(m.data) as TabEvent).type === 'verdict.settled') void loadVerdict('latest');
+    };
     events.onopen = sync;
     return () => events.close();
   }, [refresh, loadTab, loadVerdict]);
@@ -223,8 +234,21 @@ function Pair({
         me={member}
         them={partner ?? member}
         inviteLink={partner ? undefined : (link ?? '')}
-        // The first week always ends on a Sunday (spec §10).
-        firstVerdictDay={tab?.hasVerdict ? undefined : 'Sunday'}
+        firstVerdict={!tab?.hasVerdict}
+        deadline={tab?.deadline.label}
+        proposal={tab?.proposal}
+        hasVerdict={tab?.hasVerdict}
+        onPropose={
+          partner ? (end) => api<void>('/deadline/proposal', { body: { end } }).finally(loadTab) : undefined
+        }
+        onAnswer={(yes) =>
+          void api(`/deadline/proposal/${yes ? 'accept' : 'decline'}`, { method: 'POST' }).then(
+            // The accepter opens a settled verdict too, even if the stream is down.
+            () => (yes && tab?.proposal?.end === null ? loadVerdict('latest') : loadTab()),
+            loadTab,
+          )
+        }
+        onWithdraw={() => write('/deadline/proposal', { method: 'DELETE' })}
         lead={tab?.lead ?? 0}
         meOwed={tab?.meOwed ?? []}
         themOwed={tab?.themOwed ?? []}
