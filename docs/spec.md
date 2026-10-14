@@ -43,10 +43,10 @@ What the app opens to, by state:
 
 | Visitor | Opens to |
 | --- | --- |
-| No pair | Intro → **Start a tab** → name + animal picker → pair created → invite sheet with the link |
+| No pair | Intro → **Start a tab** → 1 name + animal picker → 2 **Set the rules** → pair created → 3 invite sheet with the link and the rules (M10) |
 | Pair waiting for the partner | The tab in its waiting state (step 5) |
 | Complete pair | The tab |
-| Opens an invite link while not in a pair | The join flow (step 3) |
+| Opens an invite link while not in a pair | The join flow (step 3): the inviter's rules first, then the picker |
 | Opens an invite link while in a pair (waiting or complete) | A friendly page: "You already have a tab with <name>." with a button to it. The invite is not consumed. |
 | Opens their own invite link | The waiting state, with "Send this link to your partner." |
 
@@ -57,6 +57,13 @@ sheet, and the real link is `/j/<token>`.
 1. Person A taps **Start a tab**, enters a name (1–12 characters after trimming, any script, inner spaces
    collapsed) and picks an animal. The API creates the pair with A as its first member and the pair timezone
    taken from A's browser (`Intl.DateTimeFormat().resolvedOptions().timeZone`).
+   **Set the rules (M10, decided by the owner on 2026-10-15).** Before the pair is created, A sets the game:
+   - the round: **Weekly** (Sunday 20:00, the default), **3-day sprint** or **5-day battle** (§10);
+   - an optional first verdict, an hour to 14 days ahead;
+   - which catalog crimes are in play (all by default; at least one crime in total);
+   - crimes of the pair's own and daily chores (§6, §8); a chore can be A's or "my partner's", which becomes
+     the joiner's when they join.
+   Older clients that send no rules get the defaults. The rules show on the invite sheet and the join page.
 2. A gets an invite link `https://<host>/j/<token>` and shares it with the system share sheet or copies it.
    The token is 128-bit random, single-use, valid 7 days. It is stored twice: hashed (for lookup) and
    encrypted with a server key (AES-256-GCM, key from the environment) so the waiting card can show the same
@@ -217,8 +224,13 @@ Worked examples (the unit tests must include these):
 ## 10. The week and the verdict
 
 - The pair stores its current week (`cycle_start`, `cycle_end`). The first week of a new pair starts when the
-  second member joins. Every week, the first included, ends by default at the first Sunday 20:00 in the pair's
-  timezone at least 48 hours after it starts, so after a Sunday verdict the next week is Sunday to Sunday.
+  second member joins. By the pair's round (§4, `cycle_days`):
+  - **Weekly** (null): every week, the first included, ends at the first Sunday 20:00 in the pair's timezone
+    at least 48 hours after it starts, so after a Sunday verdict the next week is Sunday to Sunday.
+  - **Every 3 or 5 days**: a round ends at 20:00 local on the Nth local day after it starts, and the next one
+    runs N more days (decided by the owner on 2026-10-15).
+  - The creator's first verdict, if picked, ends the first round when it is still an hour or more away at the
+    join; otherwise the round's rule applies. Joining is accepting the rules; there is no counter-offer.
 - **Settle now.** Either member can propose to settle now. The partner sees "Maya wants to settle the tab right
   now! Ready to face the verdict?" with **Settle now** / **Not yet**, and gets a push with the same words. On
   **Settle now** the week ends at that moment and seals on the spot, by the same rules as below; both phones
@@ -308,7 +320,7 @@ push is held 10 seconds so an undo can cancel it (§8).
 ```
 users           id, created_at, last_seen_at
 sessions        id, user_id, token_hash, created_at, expires_at
-pairs           id, timezone, created_at, ended_at, cycle_start, cycle_end,
+pairs           id, timezone, created_at, ended_at, cycle_start, cycle_end, cycle_days, first_end, crimes_off,
                 proposal_by, proposal_end, proposal_at                       index (cycle_end)
 members         id, pair_id, user_id, display_name, species, joined_at       unique (pair_id, species)
 invites         id, pair_id, token_hash, token_enc, created_by, expires_at, used_at, revoked_at
@@ -317,7 +329,8 @@ charges         id, pair_id, week_start, filer_id, accused_id, crime_key, status
 verdicts        id, pair_id, week_start, week_end, sealed_at, winner_id, loser_id, is_tie,
                 snapshot jsonb, sentence_key, shared_at, sentence_locked_at, served_at, confirmed_at,
                 card_url, reel_url
-custom_crimes   id, pair_id, created_by, title, description, sticker, unit, chore_owner_id, created_at,
+custom_crimes   id, pair_id, created_by, title, description, sticker, unit, chore_owner_id, chore_for_joiner,
+                created_at,
                 removed_at                                                   index (pair_id)
 chore_days      crime_id, day (local date), done_at, charge_id               key (crime_id, day)
 push_subs       id, user_id, endpoint, keys jsonb, created_at
@@ -337,10 +350,11 @@ for a body that fails its schema).
 ```
 GET    /me                               session, membership, pair summary
 DELETE /me                               delete everything (§4.8) and clear the session cookie
-POST   /pairs                            { name, species, timezone }  → { link: "/j/<token>" }
+POST   /pairs                            { name, species, timezone, rules? }  → { link: "/j/<token>" }
+                                         rules: { cycleDays: 3 | 5 | null, firstEnd, crimesOff, custom }
 GET    /pairs/invite                     current invite link while waiting (re-issued if expired)
 POST   /pairs/invite                     new invite link (revokes old)
-GET    /invites/:token                   inviter name and species (= the taken species), and `own`
+GET    /invites/:token                   inviter name and species (= the taken species), the rules, and `own`
                                          (the viewer created it); never consumes the link
 POST   /invites/:token/accept            { name, species }
 PATCH  /members/me                       { name?, species? }
@@ -391,7 +405,7 @@ OAuth, a Hebrew UI (names in Hebrew are supported), native apps, ads.
 | --- | --- | --- |
 | 1 | What happens to appeals still unresolved at the verdict? | Dropped (benefit of the doubt) (approved by the owner on 2026-10-12). |
 | 2 | Does a pending charge become guilty on its own? | Yes, after 24 hours without a plea. |
-| 3 | Verdict time | Sunday 20:00 in the pair's timezone by default; the pair can settle now or move the current deadline together (decided by the owner on 2026-10-14). Recurring 3/5/7-day cycles: not built. |
+| 3 | Verdict time | Weekly on Sunday 20:00 by default, or every 3 or 5 days at 20:00, chosen at setup (decided by the owner on 2026-10-15); the pair can settle now or move the current deadline together (2026-10-14). |
 | 4 | Tie | "Dead even" card (layout in `design.md` §6), no sentence, no reel (approved by the owner on 2026-10-12). A week with no charges seals as "Dead even" too. |
 | 5 | How long can the winner change the sentence? | Until first share or 24 hours after the verdict (decided by the owner on 2026-10-14). |
 | 6 | Account recovery when the cookie is lost | None in v1. Candidate for v1.1: a recovery link the user saves, or an emailed magic link. |
