@@ -133,6 +133,7 @@ export const customCrimeBody = z.object({
 });
 /** spec §6: how many crimes of its own a pair can have at once. */
 export const CUSTOM_CRIMES_MAX = 30;
+export type CustomCrimeInput = z.input<typeof customCrimeBody>;
 
 /** spec §7. */
 export const SENTENCES = {
