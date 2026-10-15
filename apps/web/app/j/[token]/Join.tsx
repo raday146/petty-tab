@@ -7,6 +7,7 @@ import type { InvitePreview, Me } from '@petty-tab/shared';
 import { api, ApiFailure } from '@/lib/api';
 import { Notice } from '@/screens/Notice';
 import { Picker } from '@/screens/Picker';
+import { AnimalSticker } from '@/components/AnimalSticker';
 import { RulesSummary } from '@/components/RulesSummary';
 
 type State =
@@ -84,6 +85,7 @@ export function Join({ token }: { token: string }): ReactNode {
       if (!agreed) {
         return (
           <Notice
+            face={<AnimalSticker species={state.invite.inviter.species} size={64} />}
             title={
               <>
                 <bdi>{state.invite.inviter.name}</bdi>&rsquo;s rules
