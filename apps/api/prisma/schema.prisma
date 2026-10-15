@@ -35,17 +35,23 @@ model Session {
 }
 
 model Pair {
-  id        String    @id @default(dbgenerated("uuidv7()")) @db.Uuid
-  timezone  String
-  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
-  endedAt     DateTime? @map("ended_at") @db.Timestamptz
+  id          String        @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  timezone    String
+  createdAt   DateTime      @default(now()) @map("created_at") @db.Timestamptz
+  endedAt     DateTime?     @map("ended_at") @db.Timestamptz
   /// The current cycle (spec §10); null until the second member joins. Charges carry it as week_start.
-  cycleStart  DateTime? @map("cycle_start") @db.Timestamptz
-  cycleEnd    DateTime? @map("cycle_end") @db.Timestamptz
+  cycleStart  DateTime?     @map("cycle_start") @db.Timestamptz
+  cycleEnd    DateTime?     @map("cycle_end") @db.Timestamptz
   /// The one open deadline proposal (spec §10): set while open; proposalEnd null means "settle now".
-  proposalBy  String?   @map("proposal_by") @db.Uuid
-  proposalEnd DateTime? @map("proposal_end") @db.Timestamptz
-  proposalAt  DateTime? @map("proposal_at") @db.Timestamptz
+  proposalBy  String?       @map("proposal_by") @db.Uuid
+  proposalEnd DateTime?     @map("proposal_end") @db.Timestamptz
+  proposalAt  DateTime?     @map("proposal_at") @db.Timestamptz
+  /// spec §10: null weekly (Sunday 20:00); 2, 3 or 5, every N days at 20:00 local.
+  cycleDays   Int?          @map("cycle_days")
+  /// spec §4: the creator's first deadline, used at the join if still at least an hour away.
+  firstEnd    DateTime?     @map("first_end") @db.Timestamptz
+  /// spec §6: catalog crime keys out of play for this pair.
+  crimesOff   String[]      @default([]) @map("crimes_off")
   members     Member[]
   invites     Invite[]
   charges     Charge[]
@@ -57,17 +63,17 @@ model Pair {
 }
 
 model Member {
-  id          String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
-  pairId      String   @map("pair_id") @db.Uuid
-  pair        Pair     @relation(fields: [pairId], references: [id], onDelete: Cascade)
-  userId      String   @map("user_id") @db.Uuid
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  displayName String   @map("display_name")
+  id          String        @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  pairId      String        @map("pair_id") @db.Uuid
+  pair        Pair          @relation(fields: [pairId], references: [id], onDelete: Cascade)
+  userId      String        @map("user_id") @db.Uuid
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  displayName String        @map("display_name")
   species     String
-  joinedAt    DateTime @default(now()) @map("joined_at") @db.Timestamptz
+  joinedAt    DateTime      @default(now()) @map("joined_at") @db.Timestamptz
   invites     Invite[]
-  filed       Charge[] @relation("filer")
-  accused     Charge[] @relation("accused")
+  filed       Charge[]      @relation("filer")
+  accused     Charge[]      @relation("accused")
   created     CustomCrime[] @relation("creator")
   chores      CustomCrime[] @relation("choreOwner")
 
@@ -158,24 +164,26 @@ model Verdict {
 
 /// spec §6: a pair's own crimes. Charges store them as `custom:<id>` in crime_key.
 model CustomCrime {
-  id           String     @id @default(dbgenerated("uuidv7()")) @db.Uuid
-  pairId       String     @map("pair_id") @db.Uuid
-  pair         Pair       @relation(fields: [pairId], references: [id], onDelete: Cascade)
-  createdBy    String     @map("created_by") @db.Uuid
-  creator      Member     @relation("creator", fields: [createdBy], references: [id], onDelete: Cascade)
+  id             String     @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  pairId         String     @map("pair_id") @db.Uuid
+  pair           Pair       @relation(fields: [pairId], references: [id], onDelete: Cascade)
+  createdBy      String     @map("created_by") @db.Uuid
+  creator        Member     @relation("creator", fields: [createdBy], references: [id], onDelete: Cascade)
   /// User text, ≤ 40 and ≤ 80: shown as text, never passed to packages/art.
-  title        String
-  description  String
+  title          String
+  description    String
   /// A StickerKey and a UnitKey of @petty-tab/shared, checked by the request schema.
-  sticker      String
-  unit         String
+  sticker        String
+  unit           String
   /// spec §8: set, a daily chore this member ticks; null, an ordinary crime.
-  choreOwnerId String?    @map("chore_owner_id") @db.Uuid
-  choreOwner   Member?    @relation("choreOwner", fields: [choreOwnerId], references: [id], onDelete: Cascade)
-  createdAt    DateTime   @default(now()) @map("created_at") @db.Timestamptz
+  choreOwnerId   String?    @map("chore_owner_id") @db.Uuid
+  choreOwner     Member?    @relation("choreOwner", fields: [choreOwnerId], references: [id], onDelete: Cascade)
+  /// spec §4: a chore set up for the partner before they joined; the join hands it to them.
+  choreForJoiner Boolean    @default(false) @map("chore_for_joiner")
+  createdAt      DateTime   @default(now()) @map("created_at") @db.Timestamptz
   /// Out of the picker; old charges and verdicts still read it.
-  removedAt    DateTime?  @map("removed_at") @db.Timestamptz
-  days         ChoreDay[]
+  removedAt      DateTime?  @map("removed_at") @db.Timestamptz
+  days           ChoreDay[]
 
   @@index([pairId])
   @@map("custom_crimes")

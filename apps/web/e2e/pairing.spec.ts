@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { path, person, pick, startTab } from './people';
+import { openInvite, path, person, pick, startTab } from './people';
 
 // spec §4 end to end: two people, two browser contexts (two cookies), one tab.
 
@@ -13,7 +13,7 @@ test('A starts a tab, B joins with another animal, both see the pair', async ({ 
   await expect(a.getByRole('main').getByText(path(link))).toBeVisible();
 
   const b = await person(browser);
-  await b.goto(path(link));
+  await openInvite(b, link);
   await expect(b.getByText(/invited you/)).toContainText('Maya');
   // The inviter's animal is taken (spec §4.3).
   await expect(b.getByRole('button', { name: /Cat/ }).first()).toBeDisabled();
@@ -36,7 +36,7 @@ test('an invite opened while already in a pair is not consumed', async ({ browse
   await expect(c.getByRole('heading', { name: 'You already have a tab.' })).toBeVisible();
 
   const b = await person(browser);
-  await b.goto(path(link));
+  await openInvite(b, link);
   await expect(b.getByText(/invited you/)).toBeVisible();
 });
 
@@ -52,7 +52,7 @@ test('used and unknown links show the friendly page', async ({ browser }) => {
   const a = await person(browser);
   const link = await startTab(a, 'Dana', /Capybara/);
   const b = await person(browser);
-  await b.goto(path(link));
+  await openInvite(b, link);
   await pick(b, 'Eli', /Bear/);
   await expect(b.getByText('Dead even')).toBeVisible();
 
@@ -69,7 +69,7 @@ test('rename, change animal, and leave', async ({ browser }) => {
   const a = await person(browser);
   const link = await startTab(a, 'Roni', /Raccoon/);
   const b = await person(browser);
-  await b.goto(path(link));
+  await openInvite(b, link);
   await pick(b, 'Tal', /Turtle/);
   await expect(b.getByText('Dead even')).toBeVisible();
 

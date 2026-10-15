@@ -15,6 +15,7 @@ import {
 import { Art } from '@/components/Art';
 import { AnimalSticker } from '@/components/AnimalSticker';
 import { Button } from '@/components/Button';
+import { cycleWords } from '@/components/RulesSummary';
 import { NameChip } from '@/components/NameChip';
 import { nudge, Screen } from '@/components/Screen';
 import { Sheet } from '@/components/Sheet';
@@ -61,6 +62,9 @@ interface Props {
   /** Files a charge against the partner; resolves to its id for Undo. Without it there is no FAB (waiting). */
   onFile?: (crime: string) => string | Promise<string>;
   onUndo: (id: string, crime: string) => void;
+  /** Catalog crimes out of play, and the cycle (spec §4, §10). */
+  crimesOff?: TabView['crimesOff'];
+  cycleDays?: TabView['cycleDays'];
   /** The pair's own crimes and chores (spec §6, §8). */
   custom?: TabView['custom'];
   onCreateCrime?: (body: CustomCrimeInput) => Promise<void>;
@@ -511,7 +515,7 @@ export function Tab(props: Props): ReactNode {
                   {active.map((c) => (
                     <CrimeTile key={c.id} crime={`custom:${c.id}`} onPick={(crime) => void file(crime)} />
                   ))}
-                  {CRIME_KEYS.map((k) => (
+                  {CRIME_KEYS.filter((k) => !props.crimesOff?.includes(k)).map((k) => (
                     <CrimeTile key={k} crime={k} onPick={(crime) => void file(crime)} />
                   ))}
                 </div>
@@ -565,9 +569,9 @@ export function Tab(props: Props): ReactNode {
               it.
             </li>
             <li>
-              <b>Verdict day.</b> Sunday at 20:00, or sooner if you both tap Settle now, the week seals.
-              Whoever was charged more is found guilty and owes a sentence. Share the card, then start fresh
-              at 0&ndash;0.
+              <b>Verdict day.</b> {cycleWords(props.cycleDays ?? null)}, or sooner if you both tap Settle now,
+              the round seals. Whoever was charged more is found guilty and owes a sentence. Share the card,
+              then start fresh at 0&ndash;0.
             </li>
           </ol>
           <Button onClick={() => setHelpOpen(false)}>Got it</Button>

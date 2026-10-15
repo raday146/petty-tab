@@ -1,5 +1,7 @@
 import { z } from 'zod';
-import { ORDER, type Species } from '@petty-tab/art';
+import { ORDER, type Species, type StickerKey } from '@petty-tab/art';
+import { CRIME_KEYS, CUSTOM_CRIMES_MAX, customCrimeBody, type CrimeKey } from './catalog.ts';
+import { CYCLE_DAYS, type CycleDays } from './week.ts';
 
 const graphemes = new Intl.Segmenter();
 
@@ -24,10 +26,40 @@ export const timezoneSchema = z.string().refine((tz) => {
   }
 }, 'Unknown timezone.');
 
+/**
+ * spec §4: the game the creator sets up before inviting. `cycleDays` null is weekly (Sunday 20:00);
+ * `firstEnd` an optional first deadline (checked against the clock by the API); `crimesOff` the catalog
+ * crimes out of play; `custom` the pair's own crimes and chores ('them' is the partner who joins).
+ */
+export const rulesBody = z
+  .object({
+    cycleDays: z.union(CYCLE_DAYS.map((d) => z.literal(d))).nullable(),
+    firstEnd: z.iso.datetime({ offset: true }).nullable(),
+    crimesOff: z.array(z.enum(CRIME_KEYS as [CrimeKey, ...CrimeKey[]])).max(CRIME_KEYS.length),
+    custom: z.array(customCrimeBody).max(CUSTOM_CRIMES_MAX),
+  })
+  .refine(
+    (r) => r.custom.length > 0 || CRIME_KEYS.some((k) => !r.crimesOff.includes(k)),
+    'Keep at least one crime in play.',
+  );
+
+export type RulesInput = z.input<typeof rulesBody>;
+
+/** spec §4: the proposed rules as the invite and the join page show them. */
+export interface RulesSummary {
+  cycleDays: CycleDays;
+  /** The first deadline the creator picked, if any (ISO). */
+  firstEnd: string | null;
+  crimes: { title: string; sticker: StickerKey }[];
+  /** Chores, by whose they are from the viewer's side. */
+  chores: { title: string; owner: 'inviter' | 'you' }[];
+}
+
 export const createPairBody = z.object({
   name: nameSchema,
   species: speciesSchema,
   timezone: timezoneSchema,
+  rules: rulesBody.optional(),
 });
 export const acceptInviteBody = z.object({ name: nameSchema, species: speciesSchema });
 export const updateMemberBody = z
@@ -58,6 +90,7 @@ export interface Me {
 export interface InvitePreview {
   inviter: { name: string; species: Species };
   own: boolean;
+  rules: RulesSummary;
 }
 
 /** Every API error body (spec §14). */

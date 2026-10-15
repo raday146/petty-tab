@@ -6,7 +6,7 @@ import {
   localDay,
   cycleAt,
   deadlineLabel,
-  firstCycleEnd,
+  cycleEnd,
   reminderTime,
   sentenceDeadline,
 } from './week.ts';
@@ -15,21 +15,21 @@ const tz = 'Asia/Jerusalem';
 const at = (iso: string): Date => new Date(iso);
 
 // 2026-10-18 and 2026-10-25 are Sundays. Israel is UTC+3 until 2026-10-25 02:00, then UTC+2.
-describe('firstCycleEnd (spec §10)', () => {
+describe('cycleEnd (spec §10)', () => {
   it('ends a new pair’s first cycle at the first Sunday 20:00 48 h later', () => {
-    expect(firstCycleEnd(at('2026-10-12T10:00:00Z'), tz)).toEqual(at('2026-10-18T17:00:00Z')); // Monday
+    expect(cycleEnd(at('2026-10-12T10:00:00Z'), tz)).toEqual(at('2026-10-18T17:00:00Z')); // Monday
   });
 
   it('skips a Sunday less than 48 hours away, across the DST change', () => {
-    expect(firstCycleEnd(at('2026-10-17T10:00:00Z'), tz)).toEqual(at('2026-10-25T18:00:00Z')); // Saturday
+    expect(cycleEnd(at('2026-10-17T10:00:00Z'), tz)).toEqual(at('2026-10-25T18:00:00Z')); // Saturday
   });
 
   it('takes a Sunday exactly 48 hours away', () => {
-    expect(firstCycleEnd(at('2026-10-16T17:00:00Z'), tz)).toEqual(at('2026-10-18T17:00:00Z')); // Friday 20:00
+    expect(cycleEnd(at('2026-10-16T17:00:00Z'), tz)).toEqual(at('2026-10-18T17:00:00Z')); // Friday 20:00
   });
 
   it('runs Sunday 20:00 to the next Sunday 20:00 after a normal verdict', () => {
-    expect(firstCycleEnd(at('2026-10-18T17:00:00Z'), tz)).toEqual(at('2026-10-25T18:00:00Z'));
+    expect(cycleEnd(at('2026-10-18T17:00:00Z'), tz)).toEqual(at('2026-10-25T18:00:00Z'));
   });
 
   // Time travel: every zone turns over at its own Sunday 20:00, including the weeks its clocks change.
@@ -42,14 +42,14 @@ describe('firstCycleEnd (spec §10)', () => {
   ] as const;
   for (const [zone, joined, firstEnd, dstEnd] of cases) {
     it(`turns over at Sunday 20:00 in ${zone}, across the DST week (${dstEnd.slice(0, 10)})`, () => {
-      expect(firstCycleEnd(at(joined), zone)).toEqual(at(firstEnd));
-      expect(firstCycleEnd(at(firstEnd), zone)).toEqual(at(dstEnd));
+      expect(cycleEnd(at(joined), zone)).toEqual(at(firstEnd));
+      expect(cycleEnd(at(firstEnd), zone)).toEqual(at(dstEnd));
     });
   }
 
   it('after a settle mid-week, runs to the first Sunday 20:00 at least 48 h away', () => {
-    expect(firstCycleEnd(at('2026-10-21T09:00:00Z'), tz)).toEqual(at('2026-10-25T18:00:00Z')); // Wednesday
-    expect(firstCycleEnd(at('2026-10-23T19:00:00Z'), tz)).toEqual(at('2026-11-01T18:00:00Z')); // Friday 22:00
+    expect(cycleEnd(at('2026-10-21T09:00:00Z'), tz)).toEqual(at('2026-10-25T18:00:00Z')); // Wednesday
+    expect(cycleEnd(at('2026-10-23T19:00:00Z'), tz)).toEqual(at('2026-11-01T18:00:00Z')); // Friday 22:00
   });
 });
 
@@ -114,5 +114,26 @@ describe('chore days (spec §8: a chore day ends at local midnight)', () => {
     expect(choreDaysDue(created, tz, at('2026-10-20T22:00:00Z'))).toEqual([]); // Wednesday 01:00: Tue was creation day
     expect(choreDaysDue(created, tz, at('2026-10-21T21:00:00Z'))).toEqual(['2026-10-21']);
     expect(choreDaysDue(created, tz, at('2026-10-24T09:00:00Z'))).toEqual(['2026-10-22', '2026-10-23']);
+  });
+});
+
+describe('cycleEnd with N-day cycles (spec §10: 20:00 local on day N)', () => {
+  it('ends a 2, 3 or 5-day cycle at 20:00 on the Nth local day', () => {
+    const monday = at('2026-10-12T10:00:00Z'); // 13:00 in Jerusalem
+    expect(cycleEnd(monday, tz, 2)).toEqual(at('2026-10-14T17:00:00Z')); // Wednesday 20:00
+    expect(cycleEnd(monday, tz, 3)).toEqual(at('2026-10-15T17:00:00Z')); // Thursday 20:00
+    expect(cycleEnd(monday, tz, 5)).toEqual(at('2026-10-17T17:00:00Z')); // Saturday 20:00
+  });
+  it('repeats every N days at 20:00, across the DST change', () => {
+    const thursday = at('2026-10-22T17:00:00Z');
+    expect(cycleEnd(thursday, tz, 3)).toEqual(at('2026-10-25T18:00:00Z')); // UTC+2 from the 25th
+    expect(cycleEnd(at('2026-10-25T18:00:00Z'), tz, 3)).toEqual(at('2026-10-28T18:00:00Z'));
+  });
+  it('rolls an N-day cycle forward in cycleAt', () => {
+    const stored = { start: at('2026-10-12T10:00:00Z'), end: at('2026-10-15T17:00:00Z') };
+    expect(cycleAt(stored, tz, at('2026-10-16T09:00:00Z'), 3)).toEqual({
+      start: stored.end,
+      end: at('2026-10-18T17:00:00Z'),
+    });
   });
 });

@@ -6,7 +6,9 @@ import { reelInput } from '@petty-tab/reel';
 import {
   SENTENCES,
   type BreakdownView,
+  type InvitePreview,
   type Me,
+  type RulesInput,
   type TabEvent,
   type TabView,
   type VerdictView,
@@ -32,6 +34,7 @@ import { Notice } from '@/screens/Notice';
 import { Sheet } from '@/components/Sheet';
 import { InviteSheet } from '@/screens/InviteSheet';
 import { Picker } from '@/screens/Picker';
+import { Setup } from '@/screens/Setup';
 import { Story } from '@/screens/Story';
 import { Tab } from '@/screens/Tab';
 import { Verdict } from '@/screens/Verdict';
@@ -100,17 +103,30 @@ export function Home(): ReactNode {
   return <Pair me={me} refresh={refresh} sheetOpen={started} />;
 }
 
+/** spec §4: the setup wizard. 1 name and animal, 2 the rules, 3 the invite (the waiting tab's sheet). */
 function Start({ onStarted }: { onStarted: (me: Me) => void }): ReactNode {
-  const [picking, setPicking] = useState(false);
+  const [step, setStep] = useState<'intro' | 'identity' | 'setup'>('intro');
   const [name, setName] = useState('');
   const [species, setSpecies] = useState<Species>(ORDER[0]!);
-  if (!picking) return <Intro onStart={() => setPicking(true)} />;
-  const start = async (): Promise<void> => {
-    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    await api('/pairs', { body: { name, species, timezone } }).catch(noop);
-    onStarted(await api<Me>('/me'));
-  };
-  return <Picker name={name} species={species} onName={setName} onSpecies={setSpecies} onContinue={start} />;
+  if (step === 'intro') return <Intro onStart={() => setStep('identity')} />;
+  if (step === 'setup') {
+    const create = async (rules: RulesInput): Promise<void> => {
+      const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      await api('/pairs', { body: { name, species, timezone, rules } }).catch(noop);
+      onStarted(await api<Me>('/me'));
+    };
+    return <Setup onBack={() => setStep('identity')} onCreate={create} />;
+  }
+  return (
+    <Picker
+      step={1}
+      name={name}
+      species={species}
+      onName={setName}
+      onSpecies={setSpecies}
+      onContinue={() => setStep('setup')}
+    />
+  );
 }
 
 function Pair({
@@ -125,6 +141,15 @@ function Pair({
   const member = me.member!;
   const partner = me.pair!.partner;
   const [link, setLink] = useState<string>();
+  // spec §4: the rules on the invite sheet, read back from the link's own preview.
+  const [rules, setRules] = useState<InvitePreview['rules']>();
+  useEffect(() => {
+    if (!link) return;
+    api<InvitePreview>(`/invites/${encodeURIComponent(link.split('/j/')[1]!)}`).then(
+      (p) => setRules(p.rules),
+      noop,
+    );
+  }, [link]);
   const [sheet, setSheet] = useState(sheetOpen);
   const [editing, setEditing] = useState(false);
   const [tab, setTab] = useState<TabView>();
@@ -284,6 +309,8 @@ function Pair({
         onFile={partner ? file : undefined}
         onUndo={(id) => write(`/charges/${id}`, { method: 'DELETE' })}
         custom={tab?.custom}
+        crimesOff={tab?.crimesOff}
+        cycleDays={tab?.cycleDays}
         onBreakdown={() => {
           breakdownShown.current = true;
           setBreakdownOpen(true);
@@ -308,6 +335,7 @@ function Pair({
         <InviteSheet
           open={sheet}
           link={link}
+          rules={rules}
           onClose={() => setSheet(false)}
           onOpenTab={() => setSheet(false)}
         />

@@ -326,6 +326,8 @@ Done when:
 - [x] Opening the app offline shows the shell and a clear offline message, not an error page
       (`pwa.spec.ts` "opened offline, the app shows its shell and says it is offline; back online it carries
       on", against a production build)
+- [x] Online but the server does not answer (a dead link, the server down): "Can't reach the tab" with Try
+      again, not a blank page (PR #13, `pwa.spec.ts` "online but the server does not answer…")
 
 Notes from M6:
 - Push: `push_subs` (unique endpoint; a device that changes user moves over). `POST /push/subscriptions`
@@ -362,7 +364,7 @@ Notes from M6:
   branch: 2 and 4 in two runs, different tests each time). Every spec passes when run on its own.
 
 ## M7 · Launch hardening
-Status: in review (`feat/m7-launch`); defaults approved by the owner on 2026-10-12, deployment waits for a server
+Status: code merged (PR #8, `feat/m7-launch`, 2026-10-12); defaults approved by the owner on 2026-10-12, deployment waits for a server
 and domain
 
 - Rate limits on every write endpoint, request size limits, security headers, CSRF protection for cookie auth.
@@ -448,7 +450,7 @@ Notes from M7:
   4. No hosted error tracker for launch; rotated Docker logs only.
 
 ## Phone-test polish (between M7 and M8)
-Status: in review (`feat/phone-ux`), asked for by the owner on 2026-10-14 after the two-phone test
+Status: done (PRs #9 and #10, `fix/phone-polish` and `feat/phone-ux`, merged 2026-10-14), asked for by the owner on 2026-10-14 after the two-phone test
 
 - [x] Only the list scrolls; the page does not bounce on iOS; **Log a petty crime** is a footer under the list,
       so it never covers a charge (`Tab.module.css`, `globals.css`; reference screenshots 06 and 08 in the
@@ -467,7 +469,7 @@ Status: in review (`feat/phone-ux`), asked for by the owner on 2026-10-14 after 
   now compare the header and the score card's top row only (`BELOW_DUEL` in `e2e/screens.spec.ts`).
 
 ## M8 · Settle now and flexible deadlines
-Status: in review (`feat/m8-deadlines`). Plan approved by the owner on 2026-10-14. The core feature is
+Status: done (PR #11, `feat/m8-deadlines`, merged 2026-10-14). Plan approved by the owner on 2026-10-14. The core feature is
 **Settle now**; the second is moving the current deadline. Both need the partner's yes.
 
 Done when:
@@ -505,7 +507,7 @@ Decided by the owner on 2026-10-14:
    `reminderTime` in `week.ts`).
 
 ## M9 · Custom crimes, daily chores, the Breakdown, louder sound
-Status: in review (`feat/m9-custom-crimes`). Plan approved by the owner on 2026-10-14, with these answers: the
+Status: done (PR #12, `feat/m9-custom-crimes`, merged 2026-10-14). Plan approved by the owner on 2026-10-14, with these answers: the
 creator picks the unit; an unticked chore day is charged automatically at midnight; the Breakdown keeps all
 history.
 
@@ -531,6 +533,27 @@ Done when:
 Defaults approved by the owner on 2026-10-14: 30 own crimes per pair; either member adds or removes; no editing; the chore's
 creation day is never charged; only the owner ticks; the sweep catches up two days; haptics follow the sound
 toggle.
+
+## M10 · Setup wizard: rules before the invite
+Status: done (PR #14, `feat/m10-setup`, merged 2026-10-15). Plan approved by the owner on 2026-10-15, with these answers: an N-day
+round ends at 20:00 on day N; joining is accepting the rules.
+
+Done when:
+- [x] Name and animal (1 of 3), Set the rules (2 of 3), the invite with the rules (3 of 3); nothing is created
+      before step 2 (`e2e/setup.spec.ts` "Maya sets a 3-day sprint…")
+- [x] Weekly, 2-day dash, 3-day sprint or 5-day battle; an optional first verdict; catalog crimes on or off; own crimes and
+      chores (`identity.test.ts` "rulesBody", `week.test.ts` "cycleEnd with N-day cycles")
+- [x] The join page shows the inviter's animal and the rules from the joiner's side; joining accepts them; the first verdict is kept if
+      still an hour away; a chore for the partner becomes the joiner's (`setup.service.test.ts`)
+- [x] N-day rounds roll through sealing; a crime out of play cannot be filed and is not in the picker
+      (`setup.service.test.ts` "starts a 3-day cycle at the join…", `e2e/setup.spec.ts`)
+- [x] Existing pairs unchanged: weekly, every crime (`setup.service.test.ts` "…keeps today's defaults")
+- [x] spec §4, §10, §13, §14, Open decision 3; design.md §6
+- Set the rules, the step dots, and the rules on the invite and join pages have no reference screens; the e2e
+  report attaches "A: set the rules", "A: the invite with the rules" and "B: the rules before joining".
+
+Defaults taken (flag to change): weekly stays the default; only 2, 3 and 5 days; a stale first verdict falls back
+quietly; rules cannot be edited while waiting; crimes turned off at setup cannot be turned back on yet.
 
 ### Product ideas for M8 and later (for the owner to pick)
 1. **Custom crimes.** The pair adds its own crimes (title, one line, a unit from the catalog, a sticker

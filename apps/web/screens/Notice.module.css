@@ -6,6 +6,12 @@
   right: 24px;
   text-align: center;
 }
+.face {
+  display: flex;
+  justify-content: center;
+  margin-top: -76px;
+  margin-bottom: 12px;
+}
 .title {
   margin: 0;
   font-weight: 800;

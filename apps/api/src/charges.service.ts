@@ -18,6 +18,8 @@ import {
   UNDO_MS,
   type appealBody,
   type BreakdownView,
+  type CrimeKey,
+  type CycleDays,
   type fileChargeBody,
   type pleaBody,
   type SentenceKey,
@@ -39,10 +41,10 @@ import { PushService } from './push.service.js';
 
 /** The pair's current cycle (spec §10); only called on a complete pair, which always has one. */
 export const currentCycle = (
-  pair: { cycleStart: Date | null; cycleEnd: Date | null; timezone: string },
+  pair: { cycleStart: Date | null; cycleEnd: Date | null; timezone: string; cycleDays: number | null },
   now: Date,
 ): { start: Date; end: Date } =>
-  cycleAt({ start: pair.cycleStart!, end: pair.cycleEnd! }, pair.timezone, now);
+  cycleAt({ start: pair.cycleStart!, end: pair.cycleEnd! }, pair.timezone, now, pair.cycleDays);
 
 const notAllowed = (): ApiError => new ApiError(403, 'not_allowed', 'That is not yours to decide.');
 const conflict = (code: string): ApiError =>
@@ -98,7 +100,10 @@ export class ChargesService implements OnModuleInit {
   async file(userId: string, body: z.output<typeof fileChargeBody>): Promise<{ id: string }> {
     const { me, them, week } = await this.complete(userId);
     const now = this.clock.now();
-    // spec §6: a crime of the pair's own, still in the picker.
+    // spec §6: a catalog crime the pair kept in play, or one of its own still in the picker.
+    if (me.pair.crimesOff.includes(body.crimeKey)) {
+      throw new ApiError(404, 'not_allowed', 'That crime is not on your list.');
+    }
     if (
       isCustomKey(body.crimeKey) &&
       !(await this.prisma.customCrime.findFirst({
@@ -233,6 +238,8 @@ export class ChargesService implements OnModuleInit {
         filer: c.filerId === me.id ? 'me' : 'them',
       })),
       custom,
+      crimesOff: me.pair.crimesOff as CrimeKey[],
+      cycleDays: me.pair.cycleDays as CycleDays,
       hasVerdict: verdicts.length > 0,
       deadline: { end: week.end.toISOString(), label: deadlineLabel(week.end, me.pair.timezone) },
       proposal: me.pair.proposalBy

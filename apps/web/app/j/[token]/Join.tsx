@@ -7,6 +7,8 @@ import type { InvitePreview, Me } from '@petty-tab/shared';
 import { api, ApiFailure } from '@/lib/api';
 import { Notice } from '@/screens/Notice';
 import { Picker } from '@/screens/Picker';
+import { AnimalSticker } from '@/components/AnimalSticker';
+import { RulesSummary } from '@/components/RulesSummary';
 
 type State =
   | { kind: 'loading' }
@@ -20,6 +22,8 @@ export function Join({ token }: { token: string }): ReactNode {
   const [state, setState] = useState<State>({ kind: 'loading' });
   const [name, setName] = useState('');
   const [species, setSpecies] = useState<Species>(ORDER[0]!);
+  // spec §4: the rules come first; joining is accepting them.
+  const [agreed, setAgreed] = useState(false);
 
   useEffect(() => {
     // In order: /me first so a first visit gets one session, not two.
@@ -78,6 +82,21 @@ export function Join({ token }: { token: string }): ReactNode {
       );
     }
     case 'join':
+      if (!agreed) {
+        return (
+          <Notice
+            face={<AnimalSticker species={state.invite.inviter.species} size={64} />}
+            title={
+              <>
+                <bdi>{state.invite.inviter.name}</bdi>&rsquo;s rules
+              </>
+            }
+            lead={<RulesSummary rules={state.invite.rules} side="joiner" />}
+            action="Accept the rules & join"
+            onAction={() => setAgreed(true)}
+          />
+        );
+      }
       return (
         <Picker
           name={name}
