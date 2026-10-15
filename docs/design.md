@@ -126,13 +126,13 @@ prototype's "Invite your partner" button and pre-filled name chip are placeholde
   of 3"); no text label, per the no-eyebrow rule. Step 1 is the picker below, step 2 **Set the rules**, step 3
   the invite sheet.
 - **Set the rules**: title, a mute lead ("Your partner sees these on the invite and agrees by joining."),
-  "How long is a round?" as three paper cards (Weekly · 3-day sprint · 5-day battle, the picked one butter with
+  "How long is a round?" as four paper cards (Weekly · 2-day dash · 3-day sprint · 5-day battle, the picked one butter with
   a mustard ring), an optional "First verdict" date-time field, "Crimes in play" as the crime tiles toggling
   (out of play: 45% opacity, `aria-pressed`), "Your own" (added crimes with a × each) and an underlined
   "+ Add your own crime or chore" (the New crime sheet; "Daily chore?" reads No · Mine · your partner's). A
   sticky footer: **Create the tab** and an underlined **Back**.
 - The invite sheet shows the rules in a paper box under the link; the join page opens on "<bdi>Maya</bdi>'s
-  rules" (the Notice layout) with **Accept the rules & join**, then the picker.
+  rules" (the Notice layout, Maya's sticker head at 64px above the title) with **Accept the rules & join**, then the picker.
 
 ### Pick your spirit animal (`03`–`05`)
 - Title, name field ("Your name" label inside the field, bold value, `dir="auto"`).

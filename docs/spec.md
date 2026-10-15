@@ -58,7 +58,8 @@ sheet, and the real link is `/j/<token>`.
    collapsed) and picks an animal. The API creates the pair with A as its first member and the pair timezone
    taken from A's browser (`Intl.DateTimeFormat().resolvedOptions().timeZone`).
    **Set the rules (M10, decided by the owner on 2026-10-15).** Before the pair is created, A sets the game:
-   - the round: **Weekly** (Sunday 20:00, the default), **3-day sprint** or **5-day battle** (§10);
+   - the round: **Weekly** (Sunday 20:00, the default), **2-day dash**, **3-day sprint** or **5-day battle** (§10, 2-day
+     added by the owner on 2026-10-15);
    - an optional first verdict, an hour to 14 days ahead;
    - which catalog crimes are in play (all by default; at least one crime in total);
    - crimes of the pair's own and daily chores (§6, §8); a chore can be A's or "my partner's", which becomes
@@ -227,7 +228,7 @@ Worked examples (the unit tests must include these):
   second member joins. By the pair's round (§4, `cycle_days`):
   - **Weekly** (null): every week, the first included, ends at the first Sunday 20:00 in the pair's timezone
     at least 48 hours after it starts, so after a Sunday verdict the next week is Sunday to Sunday.
-  - **Every 3 or 5 days**: a round ends at 20:00 local on the Nth local day after it starts, and the next one
+  - **Every 2, 3 or 5 days**: a round ends at 20:00 local on the Nth local day after it starts, and the next one
     runs N more days (decided by the owner on 2026-10-15).
   - The creator's first verdict, if picked, ends the first round when it is still an hour or more away at the
     join; otherwise the round's rule applies. Joining is accepting the rules; there is no counter-offer.
@@ -351,7 +352,7 @@ for a body that fails its schema).
 GET    /me                               session, membership, pair summary
 DELETE /me                               delete everything (§4.8) and clear the session cookie
 POST   /pairs                            { name, species, timezone, rules? }  → { link: "/j/<token>" }
-                                         rules: { cycleDays: 3 | 5 | null, firstEnd, crimesOff, custom }
+                                         rules: { cycleDays: 2 | 3 | 5 | null, firstEnd, crimesOff, custom }
 GET    /pairs/invite                     current invite link while waiting (re-issued if expired)
 POST   /pairs/invite                     new invite link (revokes old)
 GET    /invites/:token                   inviter name and species (= the taken species), the rules, and `own`
@@ -405,7 +406,7 @@ OAuth, a Hebrew UI (names in Hebrew are supported), native apps, ads.
 | --- | --- | --- |
 | 1 | What happens to appeals still unresolved at the verdict? | Dropped (benefit of the doubt) (approved by the owner on 2026-10-12). |
 | 2 | Does a pending charge become guilty on its own? | Yes, after 24 hours without a plea. |
-| 3 | Verdict time | Weekly on Sunday 20:00 by default, or every 3 or 5 days at 20:00, chosen at setup (decided by the owner on 2026-10-15); the pair can settle now or move the current deadline together (2026-10-14). |
+| 3 | Verdict time | Weekly on Sunday 20:00 by default, or every 2, 3 or 5 days at 20:00, chosen at setup (decided by the owner on 2026-10-15); the pair can settle now or move the current deadline together (2026-10-14). |
 | 4 | Tie | "Dead even" card (layout in `design.md` §6), no sentence, no reel (approved by the owner on 2026-10-12). A week with no charges seals as "Dead even" too. |
 | 5 | How long can the winner change the sentence? | Until first share or 24 hours after the verdict (decided by the owner on 2026-10-14). |
 | 6 | Account recovery when the cookie is lost | None in v1. Candidate for v1.1: a recovery link the user saves, or an emailed magic link. |
