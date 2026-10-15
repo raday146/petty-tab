@@ -45,23 +45,24 @@ export function Home(): ReactNode {
   const [me, setMe] = useState<Me>();
   // The invite sheet opens once, right after Start a tab.
   const [started, setStarted] = useState(false);
-  // Offline (plan.md M6): a clear message over the cached shell; coming back online refetches everything.
-  const [offline, setOffline] = useState(false);
+  // Offline (plan.md M6), or online but the server cannot be reached (a dead link, the server down): a clear
+  // message with a retry instead of a blank page. Coming back online refetches everything.
+  const [down, setDown] = useState<'offline' | 'unreachable'>();
   const refresh = useCallback(
     () =>
       api<Me>('/me').then(
         (next) => {
           setMe(next);
-          setOffline(false);
+          setDown(undefined);
         },
-        () => setOffline(!navigator.onLine),
+        () => setDown(navigator.onLine ? 'unreachable' : 'offline'),
       ),
     [],
   );
   useEffect(() => void refresh(), [refresh]);
   useEffect(registerServiceWorker, []);
   useEffect(() => {
-    const off = (): void => setOffline(true);
+    const off = (): void => setDown('offline');
     const on = (): void => void refresh();
     addEventListener('offline', off);
     addEventListener('online', on);
@@ -71,11 +72,15 @@ export function Home(): ReactNode {
     };
   }, [refresh]);
 
-  if (offline) {
+  if (down) {
     return (
       <Notice
-        title="You're offline"
-        lead="The tab catches up as soon as you're back."
+        title={down === 'offline' ? "You're offline" : "Can't reach the tab"}
+        lead={
+          down === 'offline'
+            ? "The tab catches up as soon as you're back."
+            : 'The server is not answering. Check your connection or the link, then try again.'
+        }
         action="Try again"
         onAction={() => void refresh()}
       />
