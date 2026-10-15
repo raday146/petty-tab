@@ -48,7 +48,7 @@ export function cycleEnd(start: Date, tz: string, cycleDays: number | null = nul
 }
 
 /** spec §10: the cycle lengths a pair can pick besides weekly. */
-export const CYCLE_DAYS = [3, 5] as const;
+export const CYCLE_DAYS = [2, 3, 5] as const;
 export type CycleDays = (typeof CYCLE_DAYS)[number] | null;
 
 /**

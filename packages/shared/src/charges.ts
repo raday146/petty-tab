@@ -2,6 +2,7 @@ import { z } from 'zod';
 import type { Species } from '@petty-tab/art';
 import { CRIME_KEYS, type ChargeStatus, type CrimeInfo, type CrimeKey, type SentenceKey } from './catalog.ts';
 import type { Owed } from './score.ts';
+import type { CycleDays } from './week.ts';
 
 /** spec §8: the filer can undo for 10 seconds. */
 export const UNDO_MS = 10_000;
@@ -77,8 +78,8 @@ export interface TabView {
   charges: TabCharge[];
   /** Catalog crimes out of play for this pair (spec §6); the picker hides them. */
   crimesOff: CrimeKey[];
-  /** spec §10: null weekly, or every 3 or 5 days. */
-  cycleDays: 3 | 5 | null;
+  /** spec §10: null weekly, or every 2, 3 or 5 days. */
+  cycleDays: CycleDays;
   /** The pair's own crimes (spec §6); removed ones stay so old charges keep their title, out of the picker. */
   custom: CustomCrimeView[];
   /** A sealed verdict exists, so the deadline sheet offers it (spec §10). */

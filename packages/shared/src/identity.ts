@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { ORDER, type Species, type StickerKey } from '@petty-tab/art';
 import { CRIME_KEYS, CUSTOM_CRIMES_MAX, customCrimeBody, type CrimeKey } from './catalog.ts';
-import type { CycleDays } from './week.ts';
+import { CYCLE_DAYS, type CycleDays } from './week.ts';
 
 const graphemes = new Intl.Segmenter();
 
@@ -33,7 +33,7 @@ export const timezoneSchema = z.string().refine((tz) => {
  */
 export const rulesBody = z
   .object({
-    cycleDays: z.union([z.literal(3), z.literal(5)]).nullable(),
+    cycleDays: z.union(CYCLE_DAYS.map((d) => z.literal(d))).nullable(),
     firstEnd: z.iso.datetime({ offset: true }).nullable(),
     crimesOff: z.array(z.enum(CRIME_KEYS as [CrimeKey, ...CrimeKey[]])).max(CRIME_KEYS.length),
     custom: z.array(customCrimeBody).max(CUSTOM_CRIMES_MAX),
