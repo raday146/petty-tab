@@ -6,11 +6,14 @@ import s from './Notice.module.css';
 
 /** M2's friendly pages (spec §4): a used or unknown invite link, or one opened while already in a pair. */
 export function Notice({
+  face,
   title,
   lead,
   action,
   onAction,
 }: {
+  /** Shown above the title: the inviter's animal on the join page's rules (spec §4.3). */
+  face?: ReactNode;
   title: ReactNode;
   lead?: ReactNode;
   action: string;
@@ -19,6 +22,7 @@ export function Notice({
   return (
     <Screen aria-label="Petty Tab">
       <div className={s.body}>
+        {face && <div className={s.face}>{face}</div>}
         <h1 className={s.title}>{title}</h1>
         {lead && <p className={s.lead}>{lead}</p>}
       </div>
