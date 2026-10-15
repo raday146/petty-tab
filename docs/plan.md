@@ -539,9 +539,9 @@ round ends at 20:00 on day N; joining is accepting the rules.
 Done when:
 - [x] Name and animal (1 of 3), Set the rules (2 of 3), the invite with the rules (3 of 3); nothing is created
       before step 2 (`e2e/setup.spec.ts` "Maya sets a 3-day sprint…")
-- [x] Weekly, 3-day sprint or 5-day battle; an optional first verdict; catalog crimes on or off; own crimes and
+- [x] Weekly, 2-day dash, 3-day sprint or 5-day battle; an optional first verdict; catalog crimes on or off; own crimes and
       chores (`identity.test.ts` "rulesBody", `week.test.ts` "cycleEnd with N-day cycles")
-- [x] The join page shows the rules from the joiner's side; joining accepts them; the first verdict is kept if
+- [x] The join page shows the inviter's animal and the rules from the joiner's side; joining accepts them; the first verdict is kept if
       still an hour away; a chore for the partner becomes the joiner's (`setup.service.test.ts`)
 - [x] N-day rounds roll through sealing; a crime out of play cannot be filed and is not in the picker
       (`setup.service.test.ts` "starts a 3-day cycle at the join…", `e2e/setup.spec.ts`)
@@ -550,7 +550,7 @@ Done when:
 - Set the rules, the step dots, and the rules on the invite and join pages have no reference screens; the e2e
   report attaches "A: set the rules", "A: the invite with the rules" and "B: the rules before joining".
 
-Defaults taken (flag to change): weekly stays the default; only 3 and 5 days; a stale first verdict falls back
+Defaults taken (flag to change): weekly stays the default; only 2, 3 and 5 days; a stale first verdict falls back
 quietly; rules cannot be edited while waiting; crimes turned off at setup cannot be turned back on yet.
 
 ### Product ideas for M8 and later (for the owner to pick)
