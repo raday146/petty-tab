@@ -15,6 +15,7 @@ test('Maya sets a 3-day sprint with her own chore for Alex; Alex reviews the rul
 
   const setup = a.getByRole('main', { name: 'Set the rules' });
   await expect(setup.getByRole('img', { name: 'Step 2 of 3' })).toBeVisible();
+  await expect(setup.getByText('2-day dash')).toBeVisible();
   await setup.getByText('3-day sprint').click();
   await setup.getByRole('button', { name: /Car DJ Crimes/ }).click();
   await expect(setup.getByRole('button', { name: /Car DJ Crimes/ })).toHaveAttribute('aria-pressed', 'false');

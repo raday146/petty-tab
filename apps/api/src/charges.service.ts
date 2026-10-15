@@ -19,6 +19,7 @@ import {
   type appealBody,
   type BreakdownView,
   type CrimeKey,
+  type CycleDays,
   type fileChargeBody,
   type pleaBody,
   type SentenceKey,
@@ -238,7 +239,7 @@ export class ChargesService implements OnModuleInit {
       })),
       custom,
       crimesOff: me.pair.crimesOff as CrimeKey[],
-      cycleDays: me.pair.cycleDays as 3 | 5 | null,
+      cycleDays: me.pair.cycleDays as CycleDays,
       hasVerdict: verdicts.length > 0,
       deadline: { end: week.end.toISOString(), label: deadlineLabel(week.end, me.pair.timezone) },
       proposal: me.pair.proposalBy

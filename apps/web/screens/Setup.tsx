@@ -13,6 +13,7 @@ import s from './Setup.module.css';
 
 const CYCLES = [
   { days: null, title: 'Weekly', detail: 'Verdict every Sunday at 20:00' },
+  { days: 2, title: '2-day dash', detail: 'Verdict every 2 days at 20:00' },
   { days: 3, title: '3-day sprint', detail: 'Verdict every 3 days at 20:00' },
   { days: 5, title: '5-day battle', detail: 'Verdict every 5 days at 20:00' },
 ] as const;

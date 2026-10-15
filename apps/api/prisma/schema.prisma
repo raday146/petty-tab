@@ -46,7 +46,7 @@ model Pair {
   proposalBy  String?       @map("proposal_by") @db.Uuid
   proposalEnd DateTime?     @map("proposal_end") @db.Timestamptz
   proposalAt  DateTime?     @map("proposal_at") @db.Timestamptz
-  /// spec §10: null weekly (Sunday 20:00); 3 or 5, every N days at 20:00 local.
+  /// spec §10: null weekly (Sunday 20:00); 2, 3 or 5, every N days at 20:00 local.
   cycleDays   Int?          @map("cycle_days")
   /// spec §4: the creator's first deadline, used at the join if still at least an hour away.
   firstEnd    DateTime?     @map("first_end") @db.Timestamptz

@@ -84,6 +84,7 @@ describe('rulesBody (spec §4: the game set up before the invite)', () => {
       true,
     );
     expect(rulesBody.safeParse({ ...ok, custom: [chore] }).success).toBe(true);
+    expect(rulesBody.safeParse({ ...ok, cycleDays: 2 }).success).toBe(true);
   });
   it('refuses other cycle lengths and unknown crimes', () => {
     expect(rulesBody.safeParse({ ...ok, cycleDays: 7 }).success).toBe(false);

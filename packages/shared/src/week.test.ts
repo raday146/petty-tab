@@ -118,8 +118,9 @@ describe('chore days (spec §8: a chore day ends at local midnight)', () => {
 });
 
 describe('cycleEnd with N-day cycles (spec §10: 20:00 local on day N)', () => {
-  it('ends a 3-day or 5-day cycle at 20:00 on the Nth local day', () => {
+  it('ends a 2, 3 or 5-day cycle at 20:00 on the Nth local day', () => {
     const monday = at('2026-10-12T10:00:00Z'); // 13:00 in Jerusalem
+    expect(cycleEnd(monday, tz, 2)).toEqual(at('2026-10-14T17:00:00Z')); // Wednesday 20:00
     expect(cycleEnd(monday, tz, 3)).toEqual(at('2026-10-15T17:00:00Z')); // Thursday 20:00
     expect(cycleEnd(monday, tz, 5)).toEqual(at('2026-10-17T17:00:00Z')); // Saturday 20:00
   });
