@@ -95,3 +95,19 @@ test('there is no daily cap: an 11th charge in a row is filed', async ({ browser
     await expect(row(a, 'pending')).toHaveCount(i + 1);
   }
 });
+
+test('the live stream comes back by itself after the server answers it with an error', async ({
+  browser,
+}) => {
+  const { a, b } = await pair(browser);
+  // A tunnel or proxy error (not a network drop) closes an EventSource for good unless the page reopens it.
+  let failed = 0;
+  await b.route('**/api/events', (route) =>
+    failed++ ? route.continue() : route.fulfill({ status: 502, body: 'Bad gateway' }),
+  );
+  await b.reload();
+  await expect.poll(() => failed).toBeGreaterThan(0);
+
+  await a.request.post('/api/charges', { data: { crimeKey: 'sip' } });
+  await expect(b.getByText('Maya says you did this.')).toBeVisible({ timeout: 5000 });
+});

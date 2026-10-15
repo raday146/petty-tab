@@ -193,20 +193,54 @@ function Pair({
 
   // spec §14: any message (and every reconnect, which may have missed some) refetches the pair and the tab.
   useEffect(() => {
-    const events = new EventSource('/api/events');
     const sync = (): void => {
       void refresh();
       void loadTab();
       if (verdictId.current) void loadVerdict(verdictId.current);
       if (breakdownShown.current) void loadBreakdown();
     };
-    events.onmessage = (m: MessageEvent<string>) => {
-      sync();
-      // spec §10: a settle-now verdict opens on both phones; a verdict at the deadline waits for the chip.
-      if ((JSON.parse(m.data) as TabEvent).type === 'verdict.settled') void loadVerdict('latest');
+    let events: EventSource;
+    let retry: ReturnType<typeof setTimeout> | undefined;
+    let wait = 1000;
+    const connect = (): void => {
+      events = new EventSource('/api/events');
+      events.onmessage = (m: MessageEvent<string>) => {
+        sync();
+        // spec §10: a settle-now verdict opens on both phones; a verdict at the deadline waits for the chip.
+        if ((JSON.parse(m.data) as TabEvent).type === 'verdict.settled') void loadVerdict('latest');
+      };
+      events.onopen = () => {
+        wait = 1000;
+        sync();
+      };
+      // The browser retries a dropped connection itself, but an error response (a tunnel or proxy 5xx, the API
+      // restarting) closes the stream for good: reopen it, backing off up to 30 s.
+      events.onerror = () => {
+        if (events.readyState !== EventSource.CLOSED || retry) return;
+        retry = setTimeout(() => {
+          retry = undefined;
+          connect();
+        }, wait);
+        wait = Math.min(wait * 2, 30_000);
+      };
     };
-    events.onopen = sync;
-    return () => events.close();
+    // Back from the background (phones suspend the stream): catch up, and reopen at once if it closed.
+    const visible = (): void => {
+      if (document.visibilityState !== 'visible') return;
+      sync();
+      if (events.readyState === EventSource.CLOSED) {
+        clearTimeout(retry);
+        retry = undefined;
+        connect();
+      }
+    };
+    connect();
+    document.addEventListener('visibilitychange', visible);
+    return () => {
+      clearTimeout(retry);
+      document.removeEventListener('visibilitychange', visible);
+      events.close();
+    };
   }, [refresh, loadTab, loadVerdict, loadBreakdown]);
 
   /** The viewer's own writes refetch too, so the tab stays right even if the stream drops. */
