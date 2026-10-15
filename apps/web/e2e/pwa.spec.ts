@@ -43,3 +43,14 @@ test('opened offline, the app shows its shell and says it is offline; back onlin
   await context.setOffline(false);
   await expect(page.getByRole('button', { name: 'Start a tab' })).toBeVisible();
 });
+
+test('online but the server does not answer: a retry screen, not a blank page', async ({ page }) => {
+  // A dead link or a server that is down: the phone is online, the API is not there.
+  await page.route('**/api/me', (route) => route.abort('connectionrefused'));
+  await page.goto('/');
+  await expect(page.getByRole('heading', { name: "Can't reach the tab" })).toBeVisible();
+
+  await page.unroute('**/api/me');
+  await page.getByRole('button', { name: 'Try again' }).click();
+  await expect(page.getByRole('button', { name: 'Start a tab' })).toBeVisible();
+});
